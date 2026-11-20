@@ -44,7 +44,7 @@ CREATE INDEX IF NOT EXISTS idx_cards_next ON cards(next_review);
 try {
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_cards_unique ON cards(note_id, question);");
 } catch (e) {
-  console.log('唯一索引已存在或创建失败');
+  console.log('唯一索引已存在或创建失败:', e.message);
 }
 
 // 3. 开启 FTS5 全文搜索（解决中文搜索问题，用 trigram 分词器）
@@ -65,6 +65,18 @@ try {
       INSERT INTO cards_fts(rowid, question, answer) VALUES (new.id, new.question, new.answer);
     END;
   `);
+
+  // FTS 是 content='cards' 的外部内容表：老库里的卡片不会自动进索引，需要 rebuild 一次。
+  // 但 rebuild 是全量扫描，每次启动都跑会随卡片增长越来越慢，所以用 user_version 记账，只跑一次。
+  // 注意：不能靠 count(*) FROM cards_fts 判断是否已建索引——外部内容表的 count 直接读 cards，
+  // 两边永远相等，判断恒为「已建好」。
+  if (db.pragma('user_version', { simple: true }) < 1) {
+    db.exec("INSERT INTO cards_fts(cards_fts) VALUES('rebuild')");
+    db.pragma('user_version = 1');
+    console.log('✅ FTS5 全文搜索索引初始化完成（已重建历史数据）');
+  } else {
+    console.log('✅ FTS5 全文搜索索引就绪');
+  }
 } catch (e) {
-  console.log('FTS5 虚表创建失败', e.message);
+  console.log('❌ FTS5 虚表创建或重建失败:', e.message);
 }
