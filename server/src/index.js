@@ -149,6 +149,28 @@ app.post('/api/cards/:id/review', { preHandler: auth }, async (req, reply) => {
   return { next_review: next };
 });
 
+// ========== 设置：API Key ==========
+// 注意：前端 SettingsPage 从 v0 起就在调 /api/settings，但后端一直没实现，
+// 请求落到下面的 setNotFoundHandler，被统一回成 { error: 'API not found' } ——
+// 表现就是设置页永远存不进 key，拆卡只能吃 .env 里的那个。这里把两个接口补上。
+app.get('/api/settings', { preHandler: auth }, async (req) => {
+  const row = db.prepare('SELECT api_key FROM users WHERE id = ?').get(req.user.uid);
+  const key = row?.api_key || '';
+  return {
+    hasKey: !!key,
+    // 只回显首尾，别把完整 key 发回浏览器
+    maskedKey: key ? `${key.slice(0, 5)}****${key.slice(-4)}` : '',
+  };
+});
+
+app.post('/api/settings', { preHandler: auth }, async (req, reply) => {
+  const { api_key } = z.object({ api_key: z.string().max(200) }).parse(req.body ?? {});
+  const key = api_key.trim();
+  if (!key) return reply.code(400).send({ error: 'API Key 不能为空' });
+  db.prepare('UPDATE users SET api_key = ? WHERE id = ?').run(key, req.user.uid);
+  return { ok: true };
+});
+
 // ========== 挂载前端 ==========
 await app.register(fastifyStatic, {
   root: process.env.FRONTEND_DIST || join(__dirname, '../../web/dist'),
