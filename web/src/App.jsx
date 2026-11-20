@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getToken, setToken } from './api';
+import { getToken, setToken, setUnauthorizedHandler } from './api';
+import { applyTheme, readTheme, ensureCustomFont } from './theme';
 import LoginPage from './pages/LoginPage';
 import NotesPage from './pages/NotesPage';
 import CardsPage from './pages/CardsPage';
@@ -7,41 +8,22 @@ import ReviewPage from './pages/ReviewPage';
 import SettingsPage from './pages/SettingsPage';
 import AboutPage from './pages/AboutPage';
 
-function getContrastColor(hex) {
-  if (hex === '#ffffff' || hex === '#f8fafc' || hex === '#fef3c7' || hex === '#faf5ff') return '#1e293b';
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-  return (yiq >= 128) ? '#1e293b' : '#f8fafc';
-}
-
 export default function App() {
   const [token, _setToken] = useState(getToken());
   const [tab, setTab] = useState('notes');
 
   useEffect(() => {
-    const p = localStorage.getItem('cardbox-primary') || '#2563eb';
-    const b = localStorage.getItem('cardbox-bg') || '#f8fafc';
-    const s = localStorage.getItem('cardbox-sidebar') || '#ffffff';
-    const c = localStorage.getItem('cardbox-card') || '#ffffff';
-    
-    const isDark = getContrastColor(b) === '#f8fafc';
+    // 主题和自定义字体都只在启动时初始化一次；用户在设置页改完会直接调 applyTheme 即时生效
+    ensureCustomFont();
+    applyTheme(readTheme());
+  }, []);
 
-    document.documentElement.style.setProperty('--custom-primary', p);
-    document.documentElement.style.setProperty('--custom-bg', b);
-    document.documentElement.style.setProperty('--custom-sidebar', s);
-    document.documentElement.style.setProperty('--custom-card', c);
-    document.documentElement.style.setProperty('--custom-text', isDark ? '#f8fafc' : '#1e293b');
-    document.documentElement.style.setProperty('--custom-text-muted', isDark ? '#94a3b8' : '#64748b');
-    document.documentElement.style.setProperty('--custom-border', isDark ? '#334155' : '#e2e8f0');
-    document.documentElement.style.setProperty('--custom-hover', isDark ? '#334155' : '#f1f5f9');
-    
-    document.documentElement.style.setProperty('--custom-primary-bg', isDark ? `color-mix(in srgb, ${p} 25%, transparent)` : `color-mix(in srgb, ${p} 10%, white)`);
-    document.documentElement.style.setProperty('--custom-primary-text', isDark ? p : `color-mix(in srgb, ${p} 80%, black)`);
-    
-    const savedFontSize = localStorage.getItem('cardbox-fontsize') || '15px';
-    document.documentElement.style.setProperty('--app-font-size', savedFontSize);
+  useEffect(() => {
+    // token 失效（换过 JWT 密钥、或 7 天到期）时自动回登录页，不再卡在一行红字上
+    setUnauthorizedHandler(() => {
+      setToken(null);
+      _setToken(null);
+    });
   }, []);
 
     const navItems = [
@@ -54,7 +36,7 @@ export default function App() {
   ];
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden font-sans bg-sidebar transition-colors duration-300">
+    <div className="h-screen flex flex-col overflow-hidden bg-sidebar transition-colors duration-300">
       
       {/* 🌟 全局统一标题栏 (贯穿左右) */}
       <header className="h-14 flex items-center justify-between px-4 border-b border-app shrink-0 drag-region z-50">

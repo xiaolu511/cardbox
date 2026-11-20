@@ -1,15 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../api';
-
-// 复用的对比色函数
-function getContrastColor(hex) {
-  if (hex === '#ffffff') return '#1e293b';
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-  return (yiq >= 128) ? '#1e293b' : '#f8fafc';
-}
+import { applyTheme, readTheme, saveTheme, getContrastColor, importCustomFont } from '../theme';
 
 const PRESETS = [
   { name: '经典亮色', primary: '#2563eb', bg: '#f8fafc', sidebar: '#ffffff', card: '#ffffff' },
@@ -24,14 +15,12 @@ export default function SettingsPage() {
   const [status, setStatus] = useState({ hasKey: false, maskedKey: '' });
   const [msg, setMsg] = useState('');
   
-  // 主题状态
-  const [primary, setPrimary] = useState(localStorage.getItem('cardbox-primary') || '#2563eb');
-  const [bg, setBg] = useState(localStorage.getItem('cardbox-bg') || '#f8fafc');
-  const [sidebar, setSidebar] = useState(localStorage.getItem('cardbox-sidebar') || '#ffffff');
-  const [card, setCard] = useState(localStorage.getItem('cardbox-card') || '#ffffff');
-  
-  const [fontSize, setFontSize] = useState(localStorage.getItem('cardbox-fontsize') || '15px');
-  const [fontName, setFontName] = useState(localStorage.getItem('cardbox-fontfamily') || '系统默认');
+  // 主题状态：整份存在一个对象里，改哪个字段都走 update()，保证保存和应用不会漏项
+  const [theme, setTheme] = useState(() => readTheme());
+  const { primary, bg, sidebar, card, fontSize } = theme;
+
+  const [fontName, setFontName] = useState(theme.fontFamily);
+  const [fontMsg, setFontMsg] = useState('');
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -50,53 +39,29 @@ export default function SettingsPage() {
     } catch (e) { setMsg(`❌ ${e.message}`); }
   }
 
-  // 🌟 核心：应用主题
-  const applyTheme = (p, b, s, c) => {
-    setPrimary(p); setBg(b); setSidebar(s); setCard(c);
-    
-    localStorage.setItem('cardbox-primary', p);
-    localStorage.setItem('cardbox-bg', b);
-    localStorage.setItem('cardbox-sidebar', s);
-    localStorage.setItem('cardbox-card', c);
-
-    document.documentElement.style.setProperty('--custom-primary', p);
-    document.documentElement.style.setProperty('--custom-bg', b);
-    document.documentElement.style.setProperty('--custom-sidebar', s);
-    document.documentElement.style.setProperty('--custom-card', c);
-    
-    // 自动计算文字颜色
-    const textColor = getContrastColor(b);
-    document.documentElement.style.setProperty('--custom-text', textColor);
-    // 计算边框颜色
-    const borderColor = textColor === '#f8fafc' ? '#334155' : '#e2e8f0';
-    document.documentElement.style.setProperty('--custom-border', borderColor);
+  // 改主题唯一入口：存一份、刷一次；所有 CSS 变量由 theme.js 统一设置，不会漏项
+  const update = (patch) => {
+    const next = { ...theme, ...patch };
+    setTheme(next);
+    saveTheme(next);
+    applyTheme(next);
   };
 
-  const changeFontSize = (e) => {
-    const num = parseInt(e.target.value);
-    const sizeStr = `${num}px`;
-    setFontSize(sizeStr);
-    localStorage.setItem('cardbox-fontsize', sizeStr);
-    document.documentElement.style.setProperty('--app-font-size', sizeStr);
-  };
+  const changeFontSize = (e) => update({ fontSize: `${parseInt(e.target.value)}px` });
 
   const handleFontUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) return alert('字体文件不能超过 5MB');
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64Url = event.target.result;
-      const newFontName = file.name.replace(/\.[^/.]+$/, "");
-      localStorage.setItem('cardbox-fontfamily', newFontName);
-      localStorage.setItem('cardbox-customfont', base64Url);
-      setFontName(newFontName);
-      const fontStyle = document.createElement('style');
-      fontStyle.innerHTML = `@font-face { font-family: '${newFontName}'; src: url(${base64Url}); }`;
-      document.head.appendChild(fontStyle);
-      document.documentElement.style.setProperty('--app-font-family', `'${newFontName}', sans-serif`);
-    };
-    reader.readAsDataURL(file);
+    if (file.size > 5 * 1024 * 1024) { setFontMsg('❌ 字体文件不能超过 5MB'); return; }
+    importCustomFont(file, (r) => {
+      if (!r.ok) { setFontMsg(`❌ ${r.error}`); return; }
+      const next = { ...readTheme(), fontFamily: r.name };
+      setTheme(next);
+      saveTheme(next);
+      applyTheme(next);
+      setFontName(r.name);
+      setFontMsg(`✅ 已应用「${r.name}」`);
+    });
   };
 
   return (
@@ -143,7 +108,7 @@ export default function SettingsPage() {
               {PRESETS.map((p) => (
                 <button
                   key={p.name}
-                  onClick={() => applyTheme(p.primary, p.bg, p.sidebar, p.card)}
+                  onClick={() => update({ primary: p.primary, bg: p.bg, sidebar: p.sidebar, card: p.card })}
                   className={`relative flex flex-col items-center justify-center w-24 h-24 rounded-xl border-2 transition-all overflow-hidden ${
                     primary === p.primary && bg === p.bg ? 'border-primary-500 shadow-md ring-2 ring-primary-200' : 'border-app hover:border-gray-400'
                   }`}
@@ -162,10 +127,10 @@ export default function SettingsPage() {
             <p className="text-sm text-main mb-3 font-medium">自定义调色板</p>
             <div className="grid grid-cols-4 gap-6">
               {[
-                { label: '强调色', value: primary, set: setPrimary, key: 'primary' },
-                { label: '主背景', value: bg, set: setBg, key: 'bg' },
-                { label: '侧边栏', value: sidebar, set: setSidebar, key: 'sidebar' },
-                { label: '卡片底', value: card, set: setCard, key: 'card' },
+                { label: '强调色', value: primary, key: 'primary' },
+                { label: '主背景', value: bg, key: 'bg' },
+                { label: '侧边栏', value: sidebar, key: 'sidebar' },
+                { label: '卡片底', value: card, key: 'card' },
               ].map((item) => (
                 <div key={item.key} className="flex flex-col items-center gap-2">
                   <label className="text-xs text-muted">{item.label}</label>
@@ -173,15 +138,7 @@ export default function SettingsPage() {
                     <input 
                       type="color" 
                       value={item.value} 
-                      onChange={(e) => {
-                        const newColor = e.target.value;
-                        item.set(newColor);
-                        // 重新计算整体搭配
-                        if(item.key === 'primary') applyTheme(newColor, bg, sidebar, card);
-                        if(item.key === 'bg') applyTheme(primary, newColor, sidebar, card);
-                        if(item.key === 'sidebar') applyTheme(primary, bg, newColor, card);
-                        if(item.key === 'card') applyTheme(primary, bg, sidebar, newColor);
-                      }}
+                      onChange={(e) => update({ [item.key]: e.target.value })}
                       className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                     />
                   </div>
@@ -209,6 +166,7 @@ export default function SettingsPage() {
               <button onClick={() => fileInputRef.current.click()} className="px-4 py-1.5 border border-app rounded-lg text-sm text-main hover:bg-black/5 transition-colors">
                 导入本地字体
               </button>
+              {fontMsg && <span className="text-xs text-muted">{fontMsg}</span>}
             </div>
           </div>
         </div>

@@ -16,23 +16,20 @@ export default function AboutPage() {
           </div>
           
           <h1 className="text-2xl font-bold text-main">Cardbox</h1>
-          <p className="text-sm text-primary-600 font-medium mt-1">v1.0.2 (Stable)</p>
+          <p className="text-sm text-primary-600 font-medium mt-1">v{__APP_VERSION__}</p>
           <p className="text-muted text-sm mt-3 text-center max-w-md">
             一款基于 AI 的智能知识卡片笔记软件。将长文本一键提炼为问答卡片，结合间隔重复算法，让你的学习效率翻倍。
           </p>
 
           <div className="mt-6 flex gap-3">
             <a 
-              href="https://github.com" 
+              href="https://github.com/xiaolu511" 
               target="_blank" 
               rel="noreferrer"
               className="px-4 py-2 bg-app border border-app text-main rounded-lg text-sm font-medium hover-item transition-colors"
             >
-              GitHub 仓库
+              GitHub 主页
             </a>
-            <button className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors">
-              检查更新
-            </button>
           </div>
         </div>
 
@@ -65,12 +62,12 @@ export default function AboutPage() {
             </h3>
             <div className="flex items-center gap-4 p-4 bg-app border border-app rounded-xl">
               <div className="w-12 h-12 rounded-full bg-primary-600 flex items-center justify-center text-white font-bold text-xl shadow-sm">
-                你
+                X
               </div>
               <div>
-                <p className="font-bold text-main text-sm">你的名字 (Your Name)</p>
+                <p className="font-bold text-main text-sm">xiaolu511</p>
                 <p className="text-xs text-muted mt-0.5">全栈独立开发者</p>
-                <p className="text-xs text-muted mt-0.5">联系邮箱: your.email@example.com</p>
+                <p className="text-xs text-muted mt-0.5">联系邮箱: 2902338992@qq.com</p>
               </div>
             </div>
           </div>

@@ -1,6 +1,19 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 
+// tags 是 TEXT 存的 JSON 字符串；老数据/损坏数据会让 JSON.parse 抛错，
+// 之前一条坏卡就能把整个页面崩成白屏。解析失败就当没有标签，卡片照常显示。
+function parseTags(raw) {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((t) => typeof t === 'string' && t.trim() !== '');
+  } catch {
+    return [];
+  }
+}
+
 export default function CardsPage() {
   const [q, setQ] = useState('');
   const [cards, setCards] = useState([]);
@@ -58,7 +71,7 @@ export default function CardsPage() {
             <p className="text-sm text-muted whitespace-pre-wrap flex-1">{c.answer}</p>
             
             <div className="flex flex-wrap gap-2 pt-1">
-              {JSON.parse(c.tags).map((t) => (
+              {parseTags(c.tags).map((t) => (
                 <span key={t} className="text-xs bg-primary-50 text-primary-700 px-2 py-0.5 rounded-md font-medium">{t}</span>
               ))}
             </div>
