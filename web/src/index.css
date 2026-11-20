@@ -1,40 +1,59 @@
 @import "tailwindcss";
 
-@theme {
-  --color-primary-50: var(--theme-50);
-  --color-primary-100: var(--theme-100);
-  --color-primary-500: var(--theme-500);
-  --color-primary-600: var(--theme-600);
-  --color-primary-700: var(--theme-700);
-}
-
 :root {
-  /* 默认蓝色主题 */
-  --theme-50: #eff6ff;
-  --theme-100: #dbeafe;
-  --theme-500: #3b82f6;
-  --theme-600: #2563eb;
-  --theme-700: #1d4ed8;
+  /* 默认亮色变量 */
+  --custom-primary: #2563eb; 
+  --custom-bg: #f8fafc;
+  --custom-sidebar: #ffffff;
+  --custom-card: #ffffff;
+  --custom-text: #1e293b;
+  --custom-text-muted: #64748b;
+  --custom-border: #e2e8f0;
+  --custom-hover: #f1f5f9;
+  --custom-primary-bg: #eff6ff;     /* 导航选中底色 */
+  --custom-primary-text: #1d4ed8;   /* 导航选中文字 */
+  
+  --app-font-size: 15px;
 }
 
-/* 紫色主题 */
-[data-theme="purple"] {
-  --theme-50: #faf5ff;
-  --theme-100: #f3e8ff;
-  --theme-500: #a855f7;
-  --theme-600: #9333ea;
-  --theme-700: #7e22ce;
+/* 将变量绑定到 Tailwind 的颜色系统中 */
+@theme {
+  --color-primary-500: var(--custom-primary);
+  --color-primary-600: var(--custom-primary);
 }
 
-/* 绿色主题 */
-[data-theme="green"] {
-  --theme-50: #f0fdf4;
-  --theme-100: #dcfce7;
-  --theme-500: #22c55e;
-  --theme-600: #16a34a;
-  --theme-700: #15803d;
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  background-color: var(--custom-bg);
+  color: var(--custom-text);
+  font-size: var(--app-font-size);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* 全局拖拽区域样式 */
+/* 自定义工具类 */
+.bg-app { background-color: var(--custom-bg); }
+.bg-sidebar { background-color: var(--custom-sidebar); }
+.bg-card { background-color: var(--custom-card); }
+.text-main { color: var(--custom-text); }
+.text-muted { color: var(--custom-text-muted); }
+.border-app { border-color: var(--custom-border); }
+.hover-item:hover { background-color: var(--custom-hover); }
+.bg-primary-active { background-color: var(--custom-primary-bg); color: var(--custom-primary-text); }
+
+/* 拖拽和动画 */
 .drag-region { -webkit-app-region: drag; }
 .no-drag { -webkit-app-region: no-drag; }
+
+@keyframes pageFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-page {
+  animation: pageFadeIn 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--custom-border); border-radius: 4px; }
