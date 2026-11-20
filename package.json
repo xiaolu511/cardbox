@@ -1,0 +1,39 @@
+{
+  "name": "cardbox",
+  "version": "1.0.0",
+  "description": "AI 卡片笔记",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "build:app": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "com.cardbox.desktop",
+    "productName": "Cardbox",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "files": [
+      "main.cjs",
+      "server/**/*",
+      "web/dist/**/*"
+    ],
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*"
+    ]
+  }
+}
