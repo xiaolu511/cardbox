@@ -78,13 +78,16 @@ function waitForServer(url, maxAttempts = 15) {
 }
 
 async function createWindow() {
-  const win = new BrowserWindow({
+    const win = new BrowserWindow({
     width: 1100,
     height: 800,
     title: "Cardbox",
+    frame: false,               // 🌟 去掉原生的外部边框
+    titleBarStyle: 'hidden',    // 🌟 隐藏原生标题栏
     autoHideMenuBar: true,
-    show: false, // 🌟 新增：先隐藏窗口，等准备好了再显示，防白屏
+    show: true, 
     webPreferences: {
+      preload: path.join(__dirname, 'preload.cjs'), // 🌟 新增：用来调用系统控制
       nodeIntegration: false,
       contextIsolation: true
     }
@@ -121,4 +124,16 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', () => {
   if (serverProcess) serverProcess.kill();
   if (process.platform !== 'darwin') app.quit();
+});
+const { ipcMain } = require('electron');
+
+ipcMain.on('window-minimize', (event) => {
+  BrowserWindow.fromWebContents(event.sender).minimize();
+});
+ipcMain.on('window-maximize', (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  win.isMaximized() ? win.unmaximize() : win.maximize();
+});
+ipcMain.on('window-close', (event) => {
+  BrowserWindow.fromWebContents(event.sender).close();
 });

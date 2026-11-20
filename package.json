@@ -41,6 +41,7 @@
     },
     "files": [
       "main.cjs",
+      "preload.cjs",
       "server/src/**/*",
       "server/package.json",
       "!server/.env",

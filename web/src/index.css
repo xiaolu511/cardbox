@@ -1,1 +1,40 @@
 @import "tailwindcss";
+
+@theme {
+  --color-primary-50: var(--theme-50);
+  --color-primary-100: var(--theme-100);
+  --color-primary-500: var(--theme-500);
+  --color-primary-600: var(--theme-600);
+  --color-primary-700: var(--theme-700);
+}
+
+:root {
+  /* 默认蓝色主题 */
+  --theme-50: #eff6ff;
+  --theme-100: #dbeafe;
+  --theme-500: #3b82f6;
+  --theme-600: #2563eb;
+  --theme-700: #1d4ed8;
+}
+
+/* 紫色主题 */
+[data-theme="purple"] {
+  --theme-50: #faf5ff;
+  --theme-100: #f3e8ff;
+  --theme-500: #a855f7;
+  --theme-600: #9333ea;
+  --theme-700: #7e22ce;
+}
+
+/* 绿色主题 */
+[data-theme="green"] {
+  --theme-50: #f0fdf4;
+  --theme-100: #dcfce7;
+  --theme-500: #22c55e;
+  --theme-600: #16a34a;
+  --theme-700: #15803d;
+}
+
+/* 全局拖拽区域样式 */
+.drag-region { -webkit-app-region: drag; }
+.no-drag { -webkit-app-region: no-drag; }
