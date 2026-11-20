@@ -3,13 +3,34 @@ const path = require('path');
 const { fork } = require('child_process');
 const fs = require('fs');
 const http = require('http');
+const crypto = require('crypto');
 
 let serverProcess;
+
+// 每台机器一把自己的 JWT 签名密钥，首次启动随机生成并存在 userData 里。
+// 不能写死成固定字符串：安装包是发给别人也能用的，密钥一样就等于谁都能伪造 token。
+function getOrCreateJwtSecret(userDataPath) {
+  const secretPath = path.join(userDataPath, 'jwt-secret');
+  try {
+    if (fs.existsSync(secretPath)) {
+      const existing = fs.readFileSync(secretPath, 'utf8').trim();
+      if (existing) return existing;
+    }
+    const generated = crypto.randomBytes(32).toString('hex');
+    fs.mkdirSync(userDataPath, { recursive: true });
+    fs.writeFileSync(secretPath, generated, { mode: 0o600 });
+    return generated;
+  } catch (e) {
+    // 落盘失败也别退化成公共密钥，宁可本次运行用临时密钥（重启后 token 失效）
+    console.error('JWT 密钥落盘失败，本次使用临时密钥:', e);
+    return crypto.randomBytes(32).toString('hex');
+  }
+}
 
 function startServer() {
   const userDataPath = app.getPath('userData');
   const envPath = path.join(__dirname, 'server', '.env');
-  let envVars = { JWT_SECRET: 'dev-secret', PORT: '3000', DEEPSEEK_API_KEY: '' };
+  let envVars = { JWT_SECRET: getOrCreateJwtSecret(userDataPath), PORT: '3000', DEEPSEEK_API_KEY: '' };
   
   if (fs.existsSync(envPath)) {
     const envContent = fs.readFileSync(envPath, 'utf-8');
