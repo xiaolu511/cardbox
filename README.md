@@ -9,6 +9,8 @@
 | 笔记 | 复习中心 |
 | :---: | :---: |
 | ![笔记](docs/screenshot-notes.png) | ![复习中心](docs/screenshot-review.png) |
+| **主题设置** | **关于** |
+| ![设置](docs/screenshot-settings.png) | ![关于](docs/screenshot-about.png) |
 
 ## 功能
 
