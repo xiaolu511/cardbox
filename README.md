@@ -1,16 +1,18 @@
+[English](README.en.md) | 简体中文
+
 # Cardbox
 
 把随手笔记交给 AI 拆成「问题 + 答案」知识卡片，按间隔重复算法排复习队列，复习时随手打分，下次自动按记忆曲线再出现在你面前。
 
 桌面单机应用，数据全部留在本地。
 
-![卡片列表](docs/screenshot-cards.png)
+![卡片列表](docs/app-cards.png)
 
 | 笔记 | 复习中心 |
 | :---: | :---: |
-| ![笔记](docs/screenshot-notes.png) | ![复习中心](docs/screenshot-review.png) |
+| ![笔记](docs/app-notes.png) | ![复习中心](docs/app-review.png) |
 | **主题设置** | **关于** |
-| ![设置](docs/screenshot-settings.png) | ![关于](docs/screenshot-about.png) |
+| ![设置](docs/app-settings.png) | ![关于](docs/app-about.png) |
 
 ## 功能
 
@@ -20,6 +22,7 @@
 - **全文搜索**：SQLite FTS5 三元组索引，中文两字词自动回退 LIKE 匹配，搜「测试」也搜得到
 - **主题自定义**：5 套预设配色 + 四色取色器 + 自定义字体，改动即时生效
 - **检查更新**：从 GitHub Releases 读最新版本，比本地新才提示
+- **界面语言**：简体中文 / 繁體中文 / English，设置页一键切换
 - **本地优先**：SQLite 单文件存储，API Key 只保存在本机，不上传
 
 复习记录由后端 `review_log` 表记账，换机器或清浏览器缓存都不会丢。
@@ -72,6 +75,7 @@ preload.cjs         通过 contextBridge 暴露最小窗口控制接口
 server/src/         Fastify 服务：认证、笔记、卡片、复习、搜索、设置
 web/src/            React 前端：笔记 / 卡片 / 复习 / 设置 / 关于
 web/src/theme.js    主题与自定义字体的唯一入口，CSS 变量都在这里设
+web/src/i18n.js     界面文案与三语翻译（以简体原文为 key）
 build/icon.ico      应用图标
 docs/               README 截图
 ```

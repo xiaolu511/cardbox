@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
+import { t, useI18n } from '../i18n';
 
 // 库里存的是 UTC（'YYYY-MM-DD HH:MM:SS'），直接显示会差 8 小时
 const fmtTime = (s) => {
@@ -11,6 +12,7 @@ const fmtTime = (s) => {
 };
 
 export default function NotesPage({ active = true }) {
+  useI18n();
   const [text, setText] = useState('');
   const [notes, setNotes] = useState([]);
   const [err, setErr] = useState('');
@@ -66,13 +68,13 @@ export default function NotesPage({ active = true }) {
     setErr('');
     try {
       const r = await api(`/api/notes/${id}/cards`, { method: 'POST' });
-      if (r.created === 0) alert('⚠️ 这条笔记之前已经拆过卡了。');
-      else alert(`🎉 成功拆出 ${r.created} 张卡片！`);
+      if (r.created === 0) alert(t('⚠️ 这条笔记之前已经拆过卡了。'));
+      else alert(t('🎉 成功拆出 {n} 张卡片！', { n: r.created }));
     } catch (e) { setErr(e.message); } finally { setBusyId(null); }
   }
 
   async function del(id) {
-    if (!confirm('⚠️ 确定要删除这条笔记吗？')) return;
+    if (!confirm(t('⚠️ 确定要删除这条笔记吗？'))) return;
     setErr('');
     try {
       await api(`/api/notes/${id}`, { method: 'DELETE' });
@@ -84,11 +86,11 @@ export default function NotesPage({ active = true }) {
     <div className="space-y-4 bg-card p-6 rounded-2xl shadow-sm border border-app transition-colors duration-300">
       <textarea
         value={text} onChange={(e) => setText(e.target.value)}
-        placeholder="粘贴一段笔记，比如：TCP 三次握手是为了确认双方收发能力都正常……"
+        placeholder={t('粘贴一段笔记，比如：TCP 三次握手是为了确认双方收发能力都正常……')}
         className="w-full h-32 p-3 border border-app bg-transparent text-main rounded-lg font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder-gray-400"
       />
       <div className="flex items-center gap-3">
-        <button onClick={add} className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">保存笔记</button>
+        <button onClick={add} className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">{t('保存笔记')}</button>
         {err && <span className="text-red-500 text-sm">{err}</span>}
       </div>
       <ul className="space-y-3">
@@ -98,9 +100,9 @@ export default function NotesPage({ active = true }) {
             <div className="mt-3 flex items-center gap-4 text-xs border-t border-app pt-3">
               <span className="text-muted">{fmtTime(n.created_at)}</span>
               <div className="ml-auto flex gap-4">
-                <button onClick={() => del(n.id)} className="text-muted hover:text-red-500 transition-colors">删除</button>
+                <button onClick={() => del(n.id)} className="text-muted hover:text-red-500 transition-colors">{t('删除')}</button>
                 <button onClick={() => split(n.id)} disabled={busyId === n.id} className="text-primary-600 font-medium hover:underline disabled:opacity-50">
-                  {busyId === n.id ? 'AI 拆卡中...' : '✨ 拆成卡片'}
+                  {busyId === n.id ? t('AI 拆卡中...') : t('✨ 拆成卡片')}
                 </button>
               </div>
             </div>
@@ -116,7 +118,7 @@ export default function NotesPage({ active = true }) {
             disabled={loading}
             className="px-6 py-2 bg-app border border-app text-muted rounded-lg text-sm hover-item transition-colors disabled:opacity-50"
           >
-            {loading ? '加载中...' : '加载更多'}
+            {loading ? t('加载中...') : t('加载更多')}
           </button>
         </div>
       )}

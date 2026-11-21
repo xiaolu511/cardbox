@@ -1,0 +1,312 @@
+import { useSyncExternalStore } from 'react';
+
+/**
+ * 极简 i18n：以「简体中文原文」作为 key。
+ * 好处是不用给几百条文案编 id，漏翻的条目会自动回退到中文，不会出现空白。
+ * 新加文案只要在 EN / TW 里补一行；补不补都不影响简体用户。
+ */
+
+const STORAGE_KEY = 'cardbox-lang';
+
+export const LANGS = [
+  { id: 'zhCN', label: '简体中文' },
+  { id: 'zhTW', label: '繁體中文' },
+  { id: 'en', label: 'English' },
+];
+
+const TW = {
+  '笔记': '筆記',
+  '卡片': '卡片',
+  '复习': '複習',
+  '设置': '設定',
+  '关于': '關於',
+  '退出登录': '登出',
+  '请登录以使用': '請登入以使用',
+  '欢迎回来，请登录': '歡迎回來，請登入',
+  '创建一个新账号': '建立一個新帳號',
+  '邮箱': '信箱',
+  '密码（≥6 位）': '密碼（≥6 位）',
+  '最近使用的账号': '最近使用的帳號',
+  '登 录': '登 入',
+  '注 册': '註 冊',
+  '没有账号？去注册': '沒有帳號？去註冊',
+  '已有账号？去登录': '已有帳號？去登入',
+  '清除记忆': '清除記憶',
+  '粘贴一段笔记，比如：TCP 三次握手是为了确认双方收发能力都正常……': '貼上一段筆記，例如：TCP 三次握手是為了確認雙方收發能力都正常……',
+  '保存笔记': '儲存筆記',
+  '删除': '刪除',
+  'AI 拆卡中...': 'AI 拆卡中...',
+  '✨ 拆成卡片': '✨ 拆成卡片',
+  '⚠️ 确定要删除这条笔记吗？': '⚠️ 確定要刪除這條筆記嗎？',
+  '⚠️ 这条笔记之前已经拆过卡了。': '⚠️ 這條筆記之前已經拆過卡了。',
+  '🎉 成功拆出 {n} 张卡片！': '🎉 成功拆出 {n} 張卡片！',
+  '加载中...': '載入中...',
+  '加载更多': '載入更多',
+  '搜问题或答案（支持全文检索）...': '搜尋問題或答案（支援全文檢索）...',
+  '搜索': '搜尋',
+  '没有搜到相关卡片': '沒有搜到相關卡片',
+  '还没有卡片，去「笔记」页拆几张吧': '還沒有卡片，去「筆記」頁拆幾張吧',
+  '确定要删除这张卡片吗？': '確定要刪除這張卡片嗎？',
+  '来源：': '來源：',
+  '删除卡片': '刪除卡片',
+  '忘了': '忘了',
+  '模糊': '模糊',
+  '记得': '記得',
+  '太简单': '太簡單',
+  '今天': '今天',
+  '明天': '明天',
+  '3天后': '3 天後',
+  '7天后': '7 天後',
+  '复习中心': '複習中心',
+  '今日待复习': '今日待複習',
+  '今日已复习': '今日已複習',
+  '知识库掌握度': '知識庫掌握度',
+  '已掌握': '已掌握',
+  '已掌握 {n} / 总计 {m} 张': '已掌握 {n} / 總計 {m} 張',
+  '看未掌握': '看未掌握',
+  '未掌握': '未掌握',
+  '近 7 天复习活跃度': '近 7 天複習活躍度',
+  '最近 7 天还没有复习记录': '最近 7 天還沒有複習記錄',
+  '完成一次复习后，这里会显示每天的复习量': '完成一次複習後，這裡會顯示每天的複習量',
+  '张': '張',
+  '开始今天的复习': '開始今天的複習',
+  '基于艾宾浩斯遗忘曲线，系统已为你准备好即将遗忘的卡片。': '基於艾賓浩斯遺忘曲線，系統已為你準備好即將遺忘的卡片。',
+  '当前没有到期的卡片。新建笔记并拆卡后，明天就会出现在这里。': '目前沒有到期的卡片。新建筆記並拆卡後，明天就會出現在這裡。',
+  '选择复习范围': '選擇複習範圍',
+  '全部笔记的卡片': '全部筆記的卡片',
+  '暂无待复习卡片': '暫無待複習卡片',
+  '开始复习': '開始複習',
+  '共 {n} 张': '共 {n} 張',
+  '这个分类下还没有卡片': '這個分類下還沒有卡片',
+  '加练这 {n} 张': '加練這 {n} 張',
+  '🎉 本轮复习完成！': '🎉 本輪複習完成！',
+  '本次复习了 {n} 张卡片': '本次複習了 {n} 張卡片',
+  '返回复习主页': '返回複習主頁',
+  '明细 ({n})': '明細 ({n})',
+  '结束并返回主页': '結束並返回主頁',
+  '本轮进度 · 剩余 {n} 张': '本輪進度 · 剩餘 {n} 張',
+  '知识卡片': '知識卡片',
+  '点击卡片或按': '點擊卡片或按',
+  '显示答案': '顯示答案',
+  '按': '按',
+  '快速评分': '快速評分',
+  '当前选择范围内没有需要复习的卡片！': '目前選擇範圍內沒有需要複習的卡片！',
+  '经典亮色': '經典亮色',
+  '葡萄紫': '葡萄紫',
+  '复古护眼': '復古護眼',
+  '暗夜黑': '暗夜黑',
+  '深空灰': '深空灰',
+  'AI 引擎 (API)': 'AI 引擎 (API)',
+  '状态：': '狀態：',
+  '已配置 ({k})': '已設定 ({k})',
+  '未配置': '未設定',
+  '获取 Key': '取得 Key',
+  '输入 sk- 开头的 Key': '輸入 sk- 開頭的 Key',
+  '保存': '儲存',
+  '主题与外观': '主題與外觀',
+  '一键搭配': '一鍵搭配',
+  '自定义调色板': '自訂調色盤',
+  '强调色': '強調色',
+  '主背景': '主背景',
+  '侧边栏': '側邊欄',
+  '卡片底': '卡片底',
+  '字体大小 ({n})': '字體大小 ({n})',
+  '界面字体': '介面字體',
+  '导入本地字体': '匯入本機字體',
+  '✅ 保存成功！': '✅ 儲存成功！',
+  '❌ 字体文件不能超过 5MB': '❌ 字體檔不能超過 5MB',
+  '✅ 已应用「{n}」': '✅ 已套用「{n}」',
+  '语言': '語言',
+  '界面语言': '介面語言',
+  '切换后立即生效，保存在本机': '切換後立即生效，儲存在本機',
+  '一款基于 AI 的智能知识卡片笔记软件。将长文本一键提炼为问答卡片，结合间隔重复算法，让你的学习效率翻倍。': '一款基於 AI 的智慧知識卡片筆記軟體。將長文字一鍵提煉為問答卡片，結合間隔重複演算法，讓你的學習效率翻倍。',
+  'GitHub 主页': 'GitHub 主頁',
+  '检查更新': '檢查更新',
+  '检查中...': '檢查中...',
+  '✨ 已是最新版': '✨ 已是最新版',
+  '检查失败，重试': '檢查失敗，重試',
+  '发现新版本 v{n}': '發現新版本 v{n}',
+  '稍后提醒': '稍後提醒',
+  '前往下载': '前往下載',
+  '技术栈': '技術棧',
+  '开发者': '開發者',
+  '全栈独立开发者': '全端獨立開發者',
+  '联系邮箱: {e}': '聯絡信箱: {e}',
+  '本软件基于 MIT 协议开源。': '本軟體基於 MIT 協議開源。',
+  '请求超时': '請求逾時',
+  '版本信息无效': '版本資訊無效',
+};
+
+const EN = {
+  '笔记': 'Notes',
+  '卡片': 'Cards',
+  '复习': 'Review',
+  '设置': 'Settings',
+  '关于': 'About',
+  '退出登录': 'Log out',
+  '请登录以使用': 'Please sign in',
+  '欢迎回来，请登录': 'Welcome back, please sign in',
+  '创建一个新账号': 'Create a new account',
+  '邮箱': 'Email',
+  '密码（≥6 位）': 'Password (6+ chars)',
+  '最近使用的账号': 'Recent accounts',
+  '登 录': 'Sign in',
+  '注 册': 'Sign up',
+  '没有账号？去注册': 'No account? Sign up',
+  '已有账号？去登录': 'Already have one? Sign in',
+  '清除记忆': 'Clear history',
+  '粘贴一段笔记，比如：TCP 三次握手是为了确认双方收发能力都正常……': "Paste a note, e.g. TCP's three-way handshake confirms both sides can send and receive…",
+  '保存笔记': 'Save note',
+  '删除': 'Delete',
+  'AI 拆卡中...': 'Splitting with AI...',
+  '✨ 拆成卡片': '✨ Split into cards',
+  '⚠️ 确定要删除这条笔记吗？': '⚠️ Delete this note?',
+  '⚠️ 这条笔记之前已经拆过卡了。': '⚠️ This note was already split into cards.',
+  '🎉 成功拆出 {n} 张卡片！': '🎉 Created {n} cards!',
+  '加载中...': 'Loading...',
+  '加载更多': 'Load more',
+  '搜问题或答案（支持全文检索）...': 'Search questions or answers (full-text)...',
+  '搜索': 'Search',
+  '没有搜到相关卡片': 'No matching cards',
+  '还没有卡片，去「笔记」页拆几张吧': 'No cards yet — split some notes first',
+  '确定要删除这张卡片吗？': 'Delete this card?',
+  '来源：': 'Source: ',
+  '删除卡片': 'Delete card',
+  '忘了': 'Forgot',
+  '模糊': 'Vague',
+  '记得': 'Got it',
+  '太简单': 'Too easy',
+  '今天': 'Today',
+  '明天': 'Tomorrow',
+  '3天后': 'In 3 days',
+  '7天后': 'In 7 days',
+  '复习中心': 'Review Center',
+  '今日待复习': 'Due today',
+  '今日已复习': 'Reviewed today',
+  '知识库掌握度': 'Mastery',
+  '已掌握': 'Mastered',
+  '已掌握 {n} / 总计 {m} 张': '{n} of {m} mastered',
+  '看未掌握': 'See unmastered',
+  '未掌握': 'Unmastered',
+  '近 7 天复习活跃度': 'Last 7 days',
+  '最近 7 天还没有复习记录': 'No reviews in the last 7 days',
+  '完成一次复习后，这里会显示每天的复习量': 'Daily counts show up here after your first review',
+  '张': 'cards',
+  '开始今天的复习': "Start today's review",
+  '基于艾宾浩斯遗忘曲线，系统已为你准备好即将遗忘的卡片。': "Based on the forgetting curve, cards you're about to forget are ready.",
+  '当前没有到期的卡片。新建笔记并拆卡后，明天就会出现在这里。': 'Nothing due right now. New cards show up here tomorrow.',
+  '选择复习范围': 'Scope',
+  '全部笔记的卡片': 'All cards',
+  '暂无待复习卡片': 'Nothing due',
+  '开始复习': 'Start review',
+  '共 {n} 张': '{n} cards',
+  '这个分类下还没有卡片': 'No cards in this category',
+  '加练这 {n} 张': 'Practice these {n}',
+  '🎉 本轮复习完成！': '🎉 Round complete!',
+  '本次复习了 {n} 张卡片': 'Reviewed {n} cards this round',
+  '返回复习主页': 'Back to review home',
+  '明细 ({n})': 'Details ({n})',
+  '结束并返回主页': 'End and go back',
+  '本轮进度 · 剩余 {n} 张': 'In progress · {n} left',
+  '知识卡片': 'Knowledge card',
+  '点击卡片或按': 'Click the card or press',
+  '显示答案': 'to reveal the answer',
+  '按': 'press',
+  '快速评分': 'to grade',
+  '当前选择范围内没有需要复习的卡片！': 'No cards to review in this scope.',
+  '经典亮色': 'Classic Light',
+  '葡萄紫': 'Grape',
+  '复古护眼': 'Retro Eye-care',
+  '暗夜黑': 'Midnight',
+  '深空灰': 'Space Gray',
+  'AI 引擎 (API)': 'AI Engine (API)',
+  '状态：': 'Status: ',
+  '已配置 ({k})': 'Configured ({k})',
+  '未配置': 'Not configured',
+  '获取 Key': 'Get a key',
+  '输入 sk- 开头的 Key': 'Enter your sk-... key',
+  '保存': 'Save',
+  '主题与外观': 'Theme & Appearance',
+  '一键搭配': 'Presets',
+  '自定义调色板': 'Custom palette',
+  '强调色': 'Accent',
+  '主背景': 'Background',
+  '侧边栏': 'Sidebar',
+  '卡片底': 'Card',
+  '字体大小 ({n})': 'Font size ({n})',
+  '界面字体': 'Font',
+  '导入本地字体': 'Import font file',
+  '✅ 保存成功！': '✅ Saved!',
+  '❌ 字体文件不能超过 5MB': '❌ Font file must be under 5MB',
+  '✅ 已应用「{n}」': '✅ Applied “{n}”',
+  '语言': 'Language',
+  '界面语言': 'Interface language',
+  '切换后立即生效，保存在本机': 'Applies immediately and is stored on this machine',
+  '一款基于 AI 的智能知识卡片笔记软件。将长文本一键提炼为问答卡片，结合间隔重复算法，让你的学习效率翻倍。': 'An AI-powered knowledge card app. Turn long notes into question-and-answer cards in one click, then let spaced repetition do the rest.',
+  'GitHub 主页': 'GitHub',
+  '检查更新': 'Check for updates',
+  '检查中...': 'Checking...',
+  '✨ 已是最新版': '✨ Up to date',
+  '检查失败，重试': 'Check failed, retry',
+  '发现新版本 v{n}': 'New version v{n}',
+  '稍后提醒': 'Later',
+  '前往下载': 'Download',
+  '技术栈': 'Tech stack',
+  '开发者': 'Developer',
+  '全栈独立开发者': 'Full-stack indie developer',
+  '联系邮箱: {e}': 'Email: {e}',
+  '本软件基于 MIT 协议开源。': 'Open source under the MIT license.',
+  '请求超时': 'Request timed out',
+  '版本信息无效': 'Invalid version info',
+};
+
+const DICTS = { zhCN: null, zhTW: TW, en: EN };
+
+function detect() {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved && DICTS[saved] !== undefined) return saved;
+  const nav = (navigator.language || 'zh-CN').toLowerCase();
+  if (nav.startsWith('zh-tw') || nav.startsWith('zh-hk') || nav.startsWith('zh-hant')) return 'zhTW';
+  if (nav.startsWith('zh')) return 'zhCN';
+  return 'en';
+}
+
+let lang = detect();
+const listeners = new Set();
+
+export function getLang() {
+  return lang;
+}
+
+export function setLang(next) {
+  if (!DICTS[next] && next !== 'zhCN') return;
+  lang = next;
+  localStorage.setItem(STORAGE_KEY, next);
+  document.documentElement.lang = next === 'zhTW' ? 'zh-Hant' : next === 'en' ? 'en' : 'zh-CN';
+  listeners.forEach((fn) => fn());
+}
+
+function subscribe(fn) {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+
+/** 翻译：key 就是简体中文原文；{name} 形式的占位符用 vars 替换 */
+export function t(key, vars) {
+  const dict = DICTS[lang];
+  let out = (dict && dict[key]) || key;
+  if (vars) {
+    for (const [k, v] of Object.entries(vars)) {
+      out = out.split(`{${k}}`).join(String(v));
+    }
+  }
+  return out;
+}
+
+/** 组件里用这个拿 t 与当前语言；语言一变自动重渲染 */
+export function useI18n() {
+  return useSyncExternalStore(subscribe, getLang, getLang);
+}
+
+// 启动时把 <html lang> 也对齐，方便字体与断词
+document.documentElement.lang = lang === 'zhTW' ? 'zh-Hant' : lang === 'en' ? 'en' : 'zh-CN';

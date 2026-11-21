@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import avatarUrl from '../assets/avatar.png';
+import { t, useI18n } from '../i18n';
 
 const CURRENT_VERSION = __APP_VERSION__;
 const RELEASE_REPO = 'xiaolu511/cardbox';
@@ -43,6 +44,7 @@ async function fetchLatestRelease(signal) {
 }
 
 export default function AboutPage() {
+  useI18n();
   const [updateState, setUpdateState] = useState('idle'); // idle | loading | latest | update_available | error
   const [updateInfo, setUpdateInfo] = useState(null);
   const [errMsg, setErrMsg] = useState('');
@@ -55,7 +57,7 @@ export default function AboutPage() {
     try {
       const data = await fetchLatestRelease(ctrl.signal);
       const latest = String(data.latestVersion || '').replace(/^v/i, '');
-      if (!latest) throw new Error('版本信息无效');
+      if (!latest) throw new Error(t('版本信息无效'));
 
       // 只有服务端更新才提示；本地比远端新（比如自己编的 dev 包）就不打扰
       if (compareVersions(latest, CURRENT_VERSION) > 0) {
@@ -65,7 +67,7 @@ export default function AboutPage() {
         setUpdateState('latest');
       }
     } catch (e) {
-      setErrMsg(e.name === 'AbortError' ? '请求超时' : e.message);
+      setErrMsg(e.name === 'AbortError' ? t('请求超时') : e.message);
       setUpdateState('error');
     } finally {
       clearTimeout(timer);
@@ -91,7 +93,7 @@ export default function AboutPage() {
           <p className="text-sm text-primary-600 font-medium mt-1">v{CURRENT_VERSION}</p>
           
           <p className="text-muted text-sm mt-3 text-center max-w-md">
-            一款基于 AI 的智能知识卡片笔记软件。将长文本一键提炼为问答卡片，结合间隔重复算法，让你的学习效率翻倍。
+            {t('一款基于 AI 的智能知识卡片笔记软件。将长文本一键提炼为问答卡片，结合间隔重复算法，让你的学习效率翻倍。')}
           </p>
 
           <div className="mt-6 flex gap-3 items-center">
@@ -102,29 +104,29 @@ export default function AboutPage() {
               className="flex items-center gap-2 px-4 py-2 bg-app border border-app text-main rounded-lg text-sm font-medium hover-item transition-colors"
             >
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z" /></svg>
-              GitHub 主页
+              {t('GitHub 主页')}
             </a>
 
             {/* 🌟 检查更新按钮状态机 */}
             {updateState === 'idle' && (
               <button onClick={checkUpdate} className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors">
-                检查更新
+                {t('检查更新')}
               </button>
             )}
             {updateState === 'loading' && (
               <button disabled className="px-4 py-2 bg-primary-600/50 text-white rounded-lg text-sm font-medium cursor-wait flex items-center gap-2">
                 <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                检查中...
+                {t('检查中...')}
               </button>
             )}
             {updateState === 'latest' && (
               <button onClick={() => setUpdateState('idle')} className="px-4 py-2 bg-green-500/10 text-green-600 rounded-lg text-sm font-medium hover:bg-green-500/20 transition-colors">
-                ✨ 已是最新版
+                {t('✨ 已是最新版')}
               </button>
             )}
             {updateState === 'error' && (
               <button onClick={checkUpdate} title={errMsg} className="px-4 py-2 bg-red-500/10 text-red-600 rounded-lg text-sm font-medium hover:bg-red-500/20 transition-colors">
-                检查失败，重试
+                {t('检查失败，重试')}
               </button>
             )}
           </div>
@@ -134,8 +136,8 @@ export default function AboutPage() {
           {updateState === 'update_available' && updateInfo && (
             <div className="mt-4 w-full p-4 bg-primary-600/10 border border-primary-600/30 rounded-xl animate-page">
               <div className="flex items-center justify-between mb-2">
-                <h4 className="font-bold text-primary-600">发现新版本 v{updateInfo.latestVersion}</h4>
-                <button onClick={() => setUpdateState('idle')} className="text-xs text-primary-600 hover:underline">稍后提醒</button>
+                <h4 className="font-bold text-primary-600">{t('发现新版本 v{n}', { n: updateInfo.latestVersion })}</h4>
+                <button onClick={() => setUpdateState('idle')} className="text-xs text-primary-600 hover:underline">{t('稍后提醒')}</button>
               </div>
               <pre className="text-xs text-muted whitespace-pre-wrap mb-3">
                 {updateInfo.releaseNotes}
@@ -146,7 +148,7 @@ export default function AboutPage() {
                 rel="noreferrer"
                 className="inline-block px-4 py-1.5 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors shadow-sm"
               >
-                前往下载
+                {t('前往下载')}
               </a>
             </div>
           )}
@@ -162,7 +164,7 @@ export default function AboutPage() {
           <div>
             <h3 className="text-sm font-bold text-main mb-3 flex items-center gap-2">
               <svg className="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
-              技术栈
+              {t('技术栈')}
             </h3>
             <div className="flex flex-wrap gap-2">
               {['React', 'Fastify', 'SQLite (FTS5)', 'TailwindCSS', 'Electron', 'DeepSeek AI', 'Zod'].map(tech => (
@@ -177,7 +179,7 @@ export default function AboutPage() {
           <div>
             <h3 className="text-sm font-bold text-main mb-3 flex items-center gap-2">
               <svg className="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-              开发者
+              {t('开发者')}
             </h3>
             <div className="flex items-center gap-4 p-4 bg-app border border-app rounded-xl">
               {/* 🌟 这里使用了本地化导入的头像 */}
@@ -188,8 +190,8 @@ export default function AboutPage() {
               />
               <div>
                 <p className="font-bold text-main text-sm">xiaolu511</p>
-                <p className="text-xs text-muted mt-0.5">全栈独立开发者</p>
-                <p className="text-xs text-muted mt-0.5">联系邮箱: 2902338992@qq.com</p>
+                <p className="text-xs text-muted mt-0.5">{t('全栈独立开发者')}</p>
+                <p className="text-xs text-muted mt-0.5">{t('联系邮箱: {e}', { e: '2902338992@qq.com' })}</p>
               </div>
             </div>
           </div>
@@ -200,7 +202,7 @@ export default function AboutPage() {
               © {new Date().getFullYear()} Cardbox. Built with ❤️ and AI.
             </p>
             <p className="text-xs text-muted mt-1">
-              本软件基于 MIT 协议开源。
+              {t('本软件基于 MIT 协议开源。')}
             </p>
           </div>
 

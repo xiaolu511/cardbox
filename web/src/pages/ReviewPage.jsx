@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '../api';
+import { t, useI18n, getLang } from './../i18n';
 
 const GRADE_CONFIG = [
   { grade: 'again', label: '忘了', sub: '今天', key: '1', icon: 'M6 18L18 6M6 6l12 12', bg: 'bg-red-500/10', hoverBg: 'hover:bg-red-500/20', border: 'border-red-500/20', hoverBorder: 'hover:border-red-500/40', text: 'text-red-500', textBold: 'text-red-600' },
@@ -14,7 +15,8 @@ const buildChart = (last7d) => {
   if (!Array.isArray(last7d)) return [];
   return last7d.map((d) => {
     const [y, m, day] = d.date.split('-').map(Number);
-    const label = new Date(y, m - 1, day).toLocaleDateString('zh-CN', { weekday: 'short' });
+    const locale = { zhCN: 'zh-CN', zhTW: 'zh-TW', en: 'en-US' }[getLang()] || 'zh-CN';
+    const label = new Date(y, m - 1, day).toLocaleDateString(locale, { weekday: 'short' });
     return { key: d.date, label, count: d.count || 0 };
   });
 };
@@ -22,6 +24,7 @@ const buildChart = (last7d) => {
 const emptyStats = { due: 0, mastered: 0, total: 0, todayReviewed: 0, last7d: [] };
 
 export default function ReviewPage({ active }) {
+  useI18n();
   const [view, setView] = useState('home');
   const [notes, setNotes] = useState([]);
   const [selectedNote, setSelectedNote] = useState('all');
@@ -75,7 +78,7 @@ export default function ReviewPage({ active }) {
     try {
       const data = await api(`/api/review?note_id=${selectedNote}`);
       if (data.length === 0) {
-        alert('当前选择范围内没有需要复习的卡片！');
+        alert(t('当前选择范围内没有需要复习的卡片！'));
         setLoading(false);
         return;
       }
@@ -159,7 +162,7 @@ export default function ReviewPage({ active }) {
     return (
       <>
       <div className="max-w-4xl mx-auto animate-page">
-        <h2 className="text-2xl font-bold text-main mb-6">复习中心</h2>
+        <h2 className="text-2xl font-bold text-main mb-6">{t('复习中心')}</h2>
         
         {/* 数据面板 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -170,10 +173,10 @@ export default function ReviewPage({ active }) {
             <div className="absolute top-0 right-0 p-4 opacity-10">
               <svg className="w-16 h-16 text-primary-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"></path></svg>
             </div>
-            <p className="text-sm font-medium text-muted mb-1">今日待复习</p>
+            <p className="text-sm font-medium text-muted mb-1">{t('今日待复习')}</p>
             <div className="flex items-baseline gap-2">
               <p className="text-4xl font-bold text-primary-600">{serverStats.due}</p>
-              <p className="text-sm text-muted">张</p>
+              <p className="text-sm text-muted">{t('张')}</p>
             </div>
           </div>
 
@@ -184,10 +187,10 @@ export default function ReviewPage({ active }) {
             <div className="absolute top-0 right-0 p-4 opacity-10">
               <svg className="w-16 h-16 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path></svg>
             </div>
-            <p className="text-sm font-medium text-muted mb-1">今日已复习</p>
+            <p className="text-sm font-medium text-muted mb-1">{t('今日已复习')}</p>
             <div className="flex items-baseline gap-2">
               <p className="text-4xl font-bold text-green-500">{serverStats.todayReviewed}</p>
-              <p className="text-sm text-muted">张</p>
+              <p className="text-sm text-muted">{t('张')}</p>
             </div>
           </div>
 
@@ -195,7 +198,7 @@ export default function ReviewPage({ active }) {
             onClick={() => openDetail('mastered', '已掌握')}
             className="bg-card border border-app p-6 rounded-2xl shadow-sm relative overflow-hidden cursor-pointer transition-colors hover:border-primary-500/40"
           >
-            <p className="text-sm font-medium text-muted mb-1">知识库掌握度</p>
+            <p className="text-sm font-medium text-muted mb-1">{t('知识库掌握度')}</p>
             <div className="flex items-baseline gap-2">
               <p className="text-4xl font-bold text-main">{masteryRate}%</p>
             </div>
@@ -204,12 +207,12 @@ export default function ReviewPage({ active }) {
               <div className="h-full bg-primary-600 rounded-full transition-all duration-1000" style={{ width: `${masteryRate}%` }} />
             </div>
             <p className="text-xs text-muted mt-2">
-              已掌握 {serverStats.mastered} / 总计 {serverStats.total} 张
+              {t('已掌握 {n} / 总计 {m} 张', { n: serverStats.mastered, m: serverStats.total })}
               <button
                 onClick={(e) => { e.stopPropagation(); openDetail('unmastered', '未掌握'); }}
                 className="ml-2 text-primary-600 hover:underline"
               >
-                看未掌握
+                {t('看未掌握')}
               </button>
             </p>
           </div>
@@ -219,11 +222,11 @@ export default function ReviewPage({ active }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* 近7天趋势 */}
           <div className="bg-card border border-app p-6 rounded-2xl shadow-sm flex flex-col">
-            <h3 className="text-sm font-bold text-main mb-6">近 7 天复习活跃度</h3>
+            <h3 className="text-sm font-bold text-main mb-6">{t('近 7 天复习活跃度')}</h3>
             {weekTotal === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center">
-                <p className="text-sm text-muted">最近 7 天还没有复习记录</p>
-                <p className="text-xs text-muted/70 mt-1">完成一次复习后，这里会显示每天的复习量</p>
+                <p className="text-sm text-muted">{t('最近 7 天还没有复习记录')}</p>
+                <p className="text-xs text-muted/70 mt-1">{t('完成一次复习后，这里会显示每天的复习量')}</p>
               </div>
             ) : (
             <div className="flex-1 flex justify-between gap-2 h-32">
@@ -237,7 +240,7 @@ export default function ReviewPage({ active }) {
                     />
                     {/* Tooltip */}
                     <div className="absolute -top-8 opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 text-white text-[10px] py-1 px-2 rounded pointer-events-none whitespace-nowrap">
-                      {d.count} 张
+                      {d.count} {t('张')}
                     </div>
                   </div>
                   <span className="text-[10px] text-muted">{d.label}</span>
@@ -249,22 +252,22 @@ export default function ReviewPage({ active }) {
 
           {/* 开始复习 */}
           <div className="bg-card border border-app p-6 rounded-2xl shadow-sm flex flex-col justify-center">
-            <h3 className="text-lg font-bold text-main mb-2">开始今天的复习</h3>
+            <h3 className="text-lg font-bold text-main mb-2">{t('开始今天的复习')}</h3>
             <p className="text-xs text-muted mb-6">
               {serverStats.due > 0
-                ? '基于艾宾浩斯遗忘曲线，系统已为你准备好即将遗忘的卡片。'
-                : '当前没有到期的卡片。新建笔记并拆卡后，明天就会出现在这里。'}
+                ? t('基于艾宾浩斯遗忘曲线，系统已为你准备好即将遗忘的卡片。')
+                : t('当前没有到期的卡片。新建笔记并拆卡后，明天就会出现在这里。')}
             </p>
             
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-xs font-medium text-main">选择复习范围</label>
+                <label className="text-xs font-medium text-main">{t('选择复习范围')}</label>
                 <select 
                   value={selectedNote}
                   onChange={e => setSelectedNote(e.target.value)}
                   className="w-full border border-app bg-app text-main p-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 cursor-pointer text-sm"
                 >
-                  <option value="all" className="bg-app text-main">全部笔记的卡片</option>
+                  <option value="all" className="bg-app text-main">{t('全部笔记的卡片')}</option>
                   {notes.map(n => (
                     <option key={n.id} value={n.id} className="bg-app text-main">
                       {n.raw_text.slice(0, 15).replace(/\n/g, ' ')}... ({new Date(n.created_at).toLocaleDateString()})
@@ -278,7 +281,7 @@ export default function ReviewPage({ active }) {
                 disabled={loading || serverStats.due === 0}
                 className="w-full py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? '加载中...' : serverStats.due === 0 ? '暂无待复习卡片' : '开始复习'}
+                {loading ? t('加载中...') : serverStats.due === 0 ? t('暂无待复习卡片') : t('开始复习')}
               </button>
             </div>
             {err && <p className="text-red-500 text-xs mt-3">{err}</p>}
@@ -292,9 +295,9 @@ export default function ReviewPage({ active }) {
           <div className="w-full max-w-lg max-h-[70vh] bg-card border border-app rounded-2xl shadow-2xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-start justify-between p-5 border-b border-app">
               <div>
-                <h3 className="font-bold text-main">{detail.title}</h3>
+                <h3 className="font-bold text-main">{t(detail.title)}</h3>
                 <p className="text-xs text-muted mt-0.5">
-                  {detail.loading ? '加载中…' : `共 ${detail.items.length} 张`}
+                  {detail.loading ? t('加载中...') : t('共 {n} 张', { n: detail.items.length })}
                 </p>
               </div>
               <button onClick={() => setDetail(null)} className="p-1.5 hover:bg-app rounded-lg text-muted hover:text-main transition-colors">✕</button>
@@ -303,7 +306,7 @@ export default function ReviewPage({ active }) {
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {detail.error && <p className="text-xs text-red-500">{detail.error}</p>}
               {!detail.loading && !detail.error && detail.items.length === 0 && (
-                <p className="text-sm text-muted text-center mt-10">这个分类下还没有卡片</p>
+                <p className="text-sm text-muted text-center mt-10">{t('这个分类下还没有卡片')}</p>
               )}
               {detail.items.map(c => (
                 <div key={c.id} className="p-3 bg-app border border-app rounded-xl">
@@ -319,7 +322,7 @@ export default function ReviewPage({ active }) {
                 disabled={detail.loading || detail.items.length === 0}
                 className="w-full py-2.5 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                加练这 {detail.items.length} 张
+                {t('加练这 {n} 张', { n: detail.items.length })}
               </button>
             </div>
           </div>
@@ -338,8 +341,8 @@ export default function ReviewPage({ active }) {
         <div className="w-24 h-24 rounded-full bg-green-500/10 flex items-center justify-center mb-6 shadow-inner">
           <svg className="w-12 h-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
         </div>
-        <p className="text-2xl font-bold text-main mb-2">🎉 本轮复习完成！</p>
-        <p className="text-muted text-sm mb-8">本次复习了 {queue.length} 张卡片</p>
+        <p className="text-2xl font-bold text-main mb-2">{t('🎉 本轮复习完成！')}</p>
+        <p className="text-muted text-sm mb-8">{t('本次复习了 {n} 张卡片', { n: queue.length })}</p>
 
         <div className="grid grid-cols-4 gap-3 mb-8 max-w-md w-full">
           {GRADE_CONFIG.map((g) => {
@@ -347,21 +350,21 @@ export default function ReviewPage({ active }) {
             return (
               <button key={g.grade} onClick={() => count > 0 && setDetailGrade(g.grade)} disabled={count === 0} className={`px-4 py-3 rounded-xl transition-all duration-200 flex flex-col items-center justify-center ${g.bg} ${g.text} ${count > 0 ? 'hover:scale-105 hover:shadow-md cursor-pointer hover:bg-opacity-20' : 'opacity-50 cursor-default'}`}>
                 <p className="text-2xl font-bold">{count}</p>
-                <p className="text-xs text-muted mt-1">{g.label}</p>
+                <p className="text-xs text-muted mt-1">{t(g.label)}</p>
               </button>
             )
           })}
         </div>
 
         <button onClick={() => { setView('home'); loadDashboard(); }} className="px-6 py-2.5 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors shadow-sm">
-          返回复习主页
+          {t('返回复习主页')}
         </button>
 
         {detailGrade && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-page" onClick={() => setDetailGrade(null)}>
             <div className="bg-card w-full max-w-lg max-h-[80vh] rounded-2xl shadow-2xl border border-app flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between p-5 border-b border-app bg-app/50">
-                <h3 className="font-bold text-main flex items-center gap-2">明细 ({currentDetails.length})</h3>
+                <h3 className="font-bold text-main flex items-center gap-2">{t('明细 ({n})', { n: currentDetails.length })}</h3>
                 <button onClick={() => setDetailGrade(null)} className="p-1 hover:bg-app rounded-lg text-muted hover:text-main"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
               </div>
               <div className="p-5 overflow-y-auto space-y-4">
@@ -387,13 +390,13 @@ export default function ReviewPage({ active }) {
       <div className="flex items-center justify-between">
         <button onClick={() => setView('home')} className="text-sm text-muted hover:text-main flex items-center gap-1 transition-colors">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-          结束并返回主页
+          {t('结束并返回主页')}
         </button>
       </div>
 
       <div className="bg-card border border-app rounded-xl px-5 py-4 shadow-sm">
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-muted">本轮进度 · 剩余 {queue.length - idx} 张</span>
+          <span className="text-xs font-medium text-muted">{t('本轮进度 · 剩余 {n} 张', { n: queue.length - idx })}</span>
           <span className="text-xs font-bold text-main">{idx + 1} / {queue.length}</span>
         </div>
         <div className="h-1.5 bg-app rounded-full overflow-hidden">
@@ -404,7 +407,7 @@ export default function ReviewPage({ active }) {
       <div className="relative bg-card rounded-2xl shadow-lg border border-app p-10 min-h-[360px] flex flex-col justify-center cursor-pointer transition-all duration-300 hover:shadow-xl hover:border-primary-500/30" onClick={() => !flipped && setFlipped(true)}>
         <div className="absolute top-4 left-4 flex items-center gap-1.5 text-xs text-muted">
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-          知识卡片
+          {t('知识卡片')}
         </div>
 
         <div className="text-center space-y-6 mt-4">
@@ -422,7 +425,7 @@ export default function ReviewPage({ active }) {
 
         {!flipped && (
           <p className="absolute bottom-4 left-0 right-0 text-center text-xs text-muted">
-            点击卡片或按 <kbd className="px-1.5 py-0.5 bg-app border border-app rounded text-[10px] font-mono">Space</kbd> 显示答案
+            {t('点击卡片或按')} <kbd className="px-1.5 py-0.5 bg-app border border-app rounded text-[10px] font-mono">Space</kbd> {t('显示答案')}
           </p>
         )}
       </div>
@@ -433,14 +436,14 @@ export default function ReviewPage({ active }) {
             {GRADE_CONFIG.map((g) => (
               <button key={g.grade} onClick={() => grade(g.grade)} className={`group relative flex flex-col items-center justify-center py-4 rounded-xl border transition-all duration-150 active:scale-95 ${g.bg} ${g.hoverBg} ${g.border} ${g.hoverBorder}`}>
                 <svg className={`w-5 h-5 mb-1.5 ${g.text}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={g.icon} /></svg>
-                <span className={`text-sm font-bold ${g.textBold}`}>{g.label}</span>
-                <span className="text-[10px] text-muted mt-0.5">{g.sub}</span>
+                <span className={`text-sm font-bold ${g.textBold}`}>{t(g.label)}</span>
+                <span className="text-[10px] text-muted mt-0.5">{t(g.sub)}</span>
                 <kbd className="absolute top-1.5 right-1.5 text-[9px] text-muted/50 font-mono">{g.key}</kbd>
               </button>
             ))}
           </div>
           <p className="text-center text-xs text-muted">
-            按 <kbd className="px-1 py-0.5 bg-app border border-app rounded text-[10px] font-mono">1</kbd> - <kbd className="px-1 py-0.5 bg-app border border-app rounded text-[10px] font-mono">4</kbd> 快速评分
+            {t('按')} <kbd className="px-1 py-0.5 bg-app border border-app rounded text-[10px] font-mono">1</kbd> - <kbd className="px-1 py-0.5 bg-app border border-app rounded text-[10px] font-mono">4</kbd> {t('快速评分')}
           </p>
         </div>
       )}
