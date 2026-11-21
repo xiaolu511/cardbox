@@ -1,16 +1,46 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 
-export default function NotesPage() {
+export default function NotesPage({ active = true }) {
   const [text, setText] = useState('');
   const [notes, setNotes] = useState([]);
   const [err, setErr] = useState('');
   const [busyId, setBusyId] = useState(null);
+  
+  // 🌟 分页状态
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loading, setLoading] = useState(false);
+  // 用 ref 挡并发：state 在同一次渲染里是旧值，两次连点会双发请求
+  const busyRef = useRef(false);
 
-  async function load() {
-    setNotes(await api('/api/notes'));
+  async function load(reset = false) {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setLoading(true);
+    setErr('');
+    try {
+      const currentPage = reset ? 1 : page;
+      const res = await api(`/api/notes?page=${currentPage}&limit=15`);
+      
+      if (reset) {
+        setNotes(res.data);
+        setPage(2);
+      } else {
+        setNotes(prev => [...prev, ...res.data]);
+        setPage(prev => prev + 1);
+      }
+      setHasMore(res.hasMore);
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      busyRef.current = false;
+      setLoading(false);
+    }
   }
-  useEffect(() => { load().catch((e) => setErr(e.message)); }, []);
+
+  // 页面常驻（hidden 切换），所以切回来时要自己重拉一次
+  useEffect(() => { if (active) load(true); }, [active]);
 
   async function add() {
     if (!text.trim()) return;
@@ -18,7 +48,7 @@ export default function NotesPage() {
     try {
       await api('/api/notes', { method: 'POST', body: { raw_text: text } });
       setText('');
-      await load();
+      await load(true); // 保存后重置分页
     } catch (e) { setErr(e.message); }
   }
 
@@ -27,27 +57,18 @@ export default function NotesPage() {
     setErr('');
     try {
       const r = await api(`/api/notes/${id}/cards`, { method: 'POST' });
-      if (r.created === 0) {
-        alert('⚠️ 这条笔记之前已经拆过卡了，没有新增卡片。');
-      } else {
-        alert(`🎉 成功拆出 ${r.created} 张卡片！`);
-      }
-    } catch (e) {
-      setErr(e.message);
-    } finally {
-      setBusyId(null);
-    }
+      if (r.created === 0) alert('⚠️ 这条笔记之前已经拆过卡了。');
+      else alert(`🎉 成功拆出 ${r.created} 张卡片！`);
+    } catch (e) { setErr(e.message); } finally { setBusyId(null); }
   }
 
   async function del(id) {
-    if (!confirm('⚠️ 确定要删除这条笔记吗？它拆出来的所有卡片也会被一起删除！')) return;
+    if (!confirm('⚠️ 确定要删除这条笔记吗？')) return;
     setErr('');
     try {
       await api(`/api/notes/${id}`, { method: 'DELETE' });
-      await load();
-    } catch (e) {
-      setErr(e.message);
-    }
+      await load(true);
+    } catch (e) { setErr(e.message); }
   }
 
   return (
@@ -67,20 +88,9 @@ export default function NotesPage() {
             <p className="whitespace-pre-wrap text-sm text-main">{n.raw_text}</p>
             <div className="mt-3 flex items-center gap-4 text-xs border-t border-app pt-3">
               <span className="text-muted">{n.created_at}</span>
-              
               <div className="ml-auto flex gap-4">
-                <button
-                  onClick={() => del(n.id)}
-                  className="text-muted hover:text-red-500 transition-colors"
-                >
-                  删除
-                </button>
-                
-                <button
-                  onClick={() => split(n.id)}
-                  disabled={busyId === n.id}
-                  className="text-primary-600 font-medium hover:underline disabled:opacity-50"
-                >
+                <button onClick={() => del(n.id)} className="text-muted hover:text-red-500 transition-colors">删除</button>
+                <button onClick={() => split(n.id)} disabled={busyId === n.id} className="text-primary-600 font-medium hover:underline disabled:opacity-50">
                   {busyId === n.id ? 'AI 拆卡中...' : '✨ 拆成卡片'}
                 </button>
               </div>
@@ -88,6 +98,19 @@ export default function NotesPage() {
           </li>
         ))}
       </ul>
+      
+      {/* 🌟 加载更多按钮 */}
+      {hasMore && (
+        <div className="text-center pt-4">
+          <button 
+            onClick={() => load(false)} 
+            disabled={loading}
+            className="px-6 py-2 bg-app border border-app text-muted rounded-lg text-sm hover-item transition-colors disabled:opacity-50"
+          >
+            {loading ? '加载中...' : '加载更多'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

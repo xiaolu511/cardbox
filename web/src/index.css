@@ -1,7 +1,6 @@
 @import "tailwindcss";
 
 :root {
-  /* 默认亮色变量 */
   --custom-primary: #2563eb; 
   --custom-bg: #f8fafc;
   --custom-sidebar: #ffffff;
@@ -10,18 +9,26 @@
   --custom-text-muted: #64748b;
   --custom-border: #e2e8f0;
   --custom-hover: #f1f5f9;
-  --custom-primary-bg: #eff6ff;     /* 导航选中底色 */
-  --custom-primary-text: #1d4ed8;   /* 导航选中文字 */
+  --custom-primary-bg: #eff6ff;
+  --custom-primary-text: #1d4ed8;
   
   --app-font-size: 15px;
-  /* 字体栈：不写死，交给 theme.js 按用户导入的字体覆盖 */
+  /* 字体栈：默认给系统栈，用户在设置页导入字体后由 theme.js 覆盖这个变量 */
   --app-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif;
 }
 
-/* 将变量绑定到 Tailwind 的颜色系统中 */
 @theme {
   --color-primary-500: var(--custom-primary);
   --color-primary-600: var(--custom-primary);
+  /* 其余色阶都由主色算出来，这样换主题时强调色不会只剩两档可用 */
+  --color-primary-50: color-mix(in srgb, var(--custom-primary) 8%, white);
+  --color-primary-100: color-mix(in srgb, var(--custom-primary) 15%, white);
+  --color-primary-200: color-mix(in srgb, var(--custom-primary) 26%, white);
+  --color-primary-300: color-mix(in srgb, var(--custom-primary) 45%, white);
+  --color-primary-400: color-mix(in srgb, var(--custom-primary) 70%, white);
+  --color-primary-700: color-mix(in srgb, var(--custom-primary) 85%, black);
+  --color-primary-800: color-mix(in srgb, var(--custom-primary) 72%, black);
+  --color-primary-900: color-mix(in srgb, var(--custom-primary) 58%, black);
 }
 
 html, body, #root {
@@ -35,7 +42,6 @@ html, body, #root {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* 自定义工具类 */
 .bg-app { background-color: var(--custom-bg); }
 .bg-sidebar { background-color: var(--custom-sidebar); }
 .bg-card { background-color: var(--custom-card); }
@@ -43,9 +49,24 @@ html, body, #root {
 .text-muted { color: var(--custom-text-muted); }
 .border-app { border-color: var(--custom-border); }
 .hover-item:hover { background-color: var(--custom-hover); }
-.bg-primary-active { background-color: var(--custom-primary-bg); color: var(--custom-primary-text); }
 
-/* 拖拽和动画 */
+/* 🌟 优化：侧边栏高亮增加左侧边框，提升对比度 */
+.bg-primary-active { 
+  background-color: var(--custom-primary-bg); 
+  color: var(--custom-primary-text); 
+  position: relative; /* 为左侧线条做定位 */
+}
+
+.bg-primary-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 25%;
+  bottom: 25%;
+  width: 3px;
+  background-color: var(--custom-primary);
+  border-radius: 0 4px 4px 0; /* 右侧带一点圆角 */
+}
 .drag-region { -webkit-app-region: drag; }
 .no-drag { -webkit-app-region: no-drag; }
 
@@ -59,4 +80,4 @@ html, body, #root {
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--custom-border); border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: var(--custom-border); border-radius: 4px; }

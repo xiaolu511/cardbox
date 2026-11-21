@@ -10,7 +10,7 @@ const PRESETS = [
   { name: '深空灰', primary: '#6366f1', bg: '#111827', sidebar: '#1f2937', card: '#1f2937' },
 ];
 
-export default function SettingsPage() {
+export default function SettingsPage({ active = true }) {
   const [key, setKey] = useState('');
   const [status, setStatus] = useState({ hasKey: false, maskedKey: '' });
   const [msg, setMsg] = useState('');
@@ -23,9 +23,11 @@ export default function SettingsPage() {
   const [fontMsg, setFontMsg] = useState('');
   const fileInputRef = useRef(null);
 
+  // 切回设置页时重读一次 key 状态（别的窗口/别的设备改过也能同步）
   useEffect(() => {
-    api('/api/settings').then(setStatus).catch(console.error);
-  }, []);
+    if (!active) return;
+    api('/api/settings').then(setStatus).catch((e) => setMsg(`❌ ${e.message}`));
+  }, [active]);
 
   async function save(e) {
     e.preventDefault();
@@ -173,4 +175,4 @@ export default function SettingsPage() {
       </div>
     </div>
   );
-}
+}

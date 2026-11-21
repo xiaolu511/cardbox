@@ -13,7 +13,8 @@ export default function App() {
   const [tab, setTab] = useState('notes');
 
   useEffect(() => {
-    // 主题和自定义字体都只在启动时初始化一次；用户在设置页改完会直接调 applyTheme 即时生效
+    // 主题与自定义字体都只在启动时初始化一次；设置页改完会直接调 applyTheme 即时生效。
+    // 变量清单只维护在 theme.js 一份，别在这儿再抄一遍。
     ensureCustomFont();
     applyTheme(readTheme());
   }, []);
@@ -26,57 +27,41 @@ export default function App() {
     });
   }, []);
 
-    const navItems = [
+
+  const navItems = [
     { id: 'notes', label: '笔记', icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' },
     { id: 'cards', label: '卡片', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
     { id: 'review', label: '复习', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
     { id: 'settings', label: '设置', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' },
-    // 🌟 新增：关于图标
     { id: 'about', label: '关于', icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
   ];
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-sidebar transition-colors duration-300">
-      
-      {/* 🌟 全局统一标题栏 (贯穿左右) */}
       <header className="h-14 flex items-center justify-between px-4 border-b border-app shrink-0 drag-region z-50">
-        
-        {/* 左侧 Logo */}
         <div className="flex items-center gap-2">
           <span className="w-6 h-6 rounded bg-primary-600 text-white flex items-center justify-center text-xs font-bold">C</span>
           <h1 className="text-lg font-bold text-primary-600">Cardbox</h1>
         </div>
-
-        {/* 中间弹性拖拽区已由 header 自动填满 */}
-
-        {/* 右侧窗口控制按钮 */}
         <div className="flex items-center gap-1 no-drag">
-          <button onClick={() => window.electronAPI?.minimize()} className="p-2 hover-item rounded-md text-muted hover:text-main transition-colors">
-            <svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="5.5" width="8" height="1" fill="currentColor" /></svg>
-          </button>
-          <button onClick={() => window.electronAPI?.maximize()} className="p-2 hover-item rounded-md text-muted hover:text-main transition-colors">
-            <svg width="12" height="12" viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="currentColor" strokeWidth="1.2" /></svg>
-          </button>
-          <button onClick={() => window.electronAPI?.close()} className="p-2 hover:bg-red-500 hover:text-white rounded-md text-muted transition-colors">
-            <svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /></svg>
-          </button>
+          <button onClick={() => window.electronAPI?.minimize()} className="p-2 hover-item rounded-md text-muted hover:text-main transition-colors"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="5.5" width="8" height="1" fill="currentColor" /></svg></button>
+          <button onClick={() => window.electronAPI?.maximize()} className="p-2 hover-item rounded-md text-muted hover:text-main transition-colors"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="currentColor" strokeWidth="1.2" /></svg></button>
+          <button onClick={() => window.electronAPI?.close()} className="p-2 hover:bg-red-500 hover:text-white rounded-md text-muted transition-colors"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /></svg></button>
         </div>
       </header>
 
-      {/* 下半部分：侧边栏 + 主内容区 */}
       <div className="flex-1 flex overflow-hidden">
-        
-        {/* 👈 左侧侧边栏（去掉了顶部的 Logo 区域，直接放导航） */}
         <aside className="w-56 bg-sidebar border-r border-app flex flex-col shrink-0 z-20 transition-colors duration-300">
           <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto no-drag">
             {token && navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => setTab(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 ${
+                // 🌟 核心：transition-colors 极速变色，active:scale 带来真实的按压手感
+                className={`w-full relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-100 active:scale-[0.98] ${
                   tab === item.id 
                     ? 'bg-primary-active font-bold shadow-sm' 
-                    : 'text-muted hover-item font-medium'
+                    : 'text-muted hover-item font-medium hover:text-main'
                 }`}
               >
                 <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -89,35 +74,39 @@ export default function App() {
 
           <div className="p-4 border-t border-app no-drag">
             {token ? (
-              <button 
-                onClick={() => { setToken(null); _setToken(null); }} 
-                className="w-full py-2 bg-app hover:bg-red-500 hover:text-white text-main border border-app rounded-lg text-sm font-medium transition-colors"
-              >
-                退出登录
-              </button>
+              <button onClick={() => { setToken(null); _setToken(null); }} className="w-full py-2 bg-app hover:bg-red-500 hover:text-white text-main border border-app rounded-lg text-sm font-medium transition-colors">退出登录</button>
             ) : (
               <p className="text-xs text-center text-muted">请登录以使用</p>
             )}
           </div>
         </aside>
 
-        {/* 👉 右侧主内容区 */}
         <main className="flex-1 flex flex-col relative overflow-hidden bg-app transition-colors duration-300">
-          
-          {/* 滚动内容容器 */}
           <div className="flex-1 overflow-y-auto px-6 py-6 z-10">
              {!token ? (
                <div className="h-full flex justify-center items-center pb-20">
                  <LoginPage onLogin={(t) => { setToken(t); _setToken(t); }} />
                </div>
              ) : (
-               <div key={tab} className="max-w-4xl mx-auto animate-page">
-                 {tab === 'notes' && <NotesPage />}
-                 {tab === 'cards' && <CardsPage />}
-                 {tab === 'review' && <ReviewPage />}
-                 {tab === 'settings' && <SettingsPage />}
-                 {tab === 'about' && <AboutPage />}
-               </div>
+               // 页面常驻（hidden 切换）避免每次切页重挂重拉；但要给页面 active，
+               // 让它们在被切回来时自己刷新一次，否则在笔记页拆完卡、切到卡片页看不到新卡
+               <>
+                 <div className={tab === 'notes' ? 'block animate-page max-w-4xl mx-auto' : 'hidden'}>
+                   <NotesPage active={tab === 'notes'} />
+                 </div>
+                 <div className={tab === 'cards' ? 'block animate-page max-w-4xl mx-auto' : 'hidden'}>
+                   <CardsPage active={tab === 'cards'} />
+                 </div>
+                 <div className={tab === 'review' ? 'block animate-page max-w-4xl mx-auto' : 'hidden'}>
+                   <ReviewPage active={tab === 'review'} />
+                 </div>
+                 <div className={tab === 'settings' ? 'block animate-page max-w-4xl mx-auto' : 'hidden'}>
+                   <SettingsPage active={tab === 'settings'} />
+                 </div>
+                 <div className={tab === 'about' ? 'block animate-page max-w-4xl mx-auto' : 'hidden'}>
+                   <AboutPage />
+                 </div>
+               </>
              )}
           </div>
         </main>

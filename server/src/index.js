@@ -60,8 +60,17 @@ app.post('/api/notes', { preHandler: auth }, async (req) => {
   return db.prepare('SELECT * FROM notes WHERE id = ?').get(info.lastInsertRowid);
 });
 
+// 🌟 新增分页参数
 app.get('/api/notes', { preHandler: auth }, async (req) => {
-  return db.prepare('SELECT * FROM notes WHERE user_id = ? ORDER BY id DESC').all(req.user.uid);
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit) || 20);
+  const offset = (page - 1) * limit;
+
+  const notes = db.prepare('SELECT * FROM notes WHERE user_id = ? ORDER BY id DESC LIMIT ? OFFSET ?')
+    .all(req.user.uid, limit, offset);
+  
+  const { total } = db.prepare('SELECT count(*) as total FROM notes WHERE user_id = ?').get(req.user.uid);
+  return { data: notes, hasMore: offset + notes.length < total };
 });
 
 app.delete('/api/notes/:id', { preHandler: auth }, async (req, reply) => {
@@ -91,43 +100,50 @@ app.post('/api/notes/:id/cards', { preHandler: auth }, async (req, reply) => {
 });
 
 // ========== 卡片管理 & 搜索 ==========
+// 🌟 新增分页参数
 app.get('/api/cards', { preHandler: auth }, async (req) => {
   const q = String(req.query.q ?? '').trim();
+  const page = Math.max(1, parseInt(req.query.page) || 1);
+  const limit = Math.max(1, parseInt(req.query.limit) || 20);
+  const offset = (page - 1) * limit;
+
+  let query = '';
+  let countQuery = '';
+  let params = [req.user.uid];
+  let countParams = [req.user.uid];
+
   if (!q) {
-    return db.prepare(`SELECT c.* FROM cards c JOIN notes n ON n.id = c.note_id WHERE n.user_id = ? ORDER BY c.id DESC LIMIT 100`).all(req.user.uid);
-  }
-
-  // 修复：小于3个字符回退 LIKE
-  if (q.length < 3) {
+    query = `SELECT c.*, n.raw_text as note_text FROM cards c JOIN notes n ON n.id = c.note_id WHERE n.user_id = ? ORDER BY c.id DESC LIMIT ? OFFSET ?`;
+    countQuery = `SELECT count(*) as total FROM cards c JOIN notes n ON n.id = c.note_id WHERE n.user_id = ?`;
+  } else if (q.length < 3) {
     const like = `%${q}%`;
-    return db.prepare(`
-      SELECT c.* FROM cards c 
-      JOIN notes n ON n.id = c.note_id 
-      WHERE n.user_id = ? AND (c.question LIKE ? OR c.answer LIKE ?)
-      ORDER BY c.id DESC LIMIT 100
-    `).all(req.user.uid, like, like);
+    query = `SELECT c.*, n.raw_text as note_text FROM cards c JOIN notes n ON n.id = c.note_id WHERE n.user_id = ? AND (c.question LIKE ? OR c.answer LIKE ?) ORDER BY c.id DESC LIMIT ? OFFSET ?`;
+    countQuery = `SELECT count(*) as total FROM cards c JOIN notes n ON n.id = c.note_id WHERE n.user_id = ? AND (c.question LIKE ? OR c.answer LIKE ?)`;
+    params = [req.user.uid, like, like, limit, offset];
+    countParams = [req.user.uid, like, like];
+  } else {
+    query = `SELECT c.*, n.raw_text as note_text FROM cards c JOIN notes n ON n.id = c.note_id JOIN cards_fts f ON f.rowid = c.id WHERE n.user_id = ? AND cards_fts MATCH ? ORDER BY rank LIMIT ? OFFSET ?`;
+    countQuery = `SELECT count(*) as total FROM cards c JOIN notes n ON n.id = c.note_id JOIN cards_fts f ON f.rowid = c.id WHERE n.user_id = ? AND cards_fts MATCH ?`;
+    params = [req.user.uid, `"${q}"`, limit, offset];
+    countParams = [req.user.uid, `"${q}"`];
   }
 
-  // 修复：大于等于3字符使用 FTS5
-  return db.prepare(`
-    SELECT c.* FROM cards c 
-    JOIN notes n ON n.id = c.note_id 
-    JOIN cards_fts f ON f.rowid = c.id
-    WHERE n.user_id = ? AND cards_fts MATCH ?
-    ORDER BY rank LIMIT 100
-  `).all(req.user.uid, `"${q}"`);
+  if (!q) params.push(limit, offset); // 仅有无搜索词时需要加 limit/offset
+  else if (q.length >= 3) params.push(limit, offset); // FTS 需要加
+  
+  const cards = db.prepare(query).all(...params);
+  const { total } = db.prepare(countQuery).get(...countParams);
+
+  return { data: cards, hasMore: offset + cards.length < total };
 });
 
 app.delete('/api/cards/:id', { preHandler: auth }, async (req, reply) => {
-  const info = db.prepare(`
-    DELETE FROM cards WHERE id = ? AND note_id IN (SELECT id FROM notes WHERE user_id = ?)
-  `).run(req.params.id, req.user.uid);
+  const info = db.prepare(`DELETE FROM cards WHERE id = ? AND note_id IN (SELECT id FROM notes WHERE user_id = ?)`).run(req.params.id, req.user.uid);
   if (info.changes === 0) return reply.code(404).send({ error: '卡片不存在' });
   return { ok: true };
 });
 
-// ========== 复习功能 (v2 核心) ==========
-// 🌟 修复：补上获取复习队列的接口
+// ========== 复习功能 ==========
 app.get('/api/review', { preHandler: auth }, async (req) => {
   return db.prepare(`
     SELECT c.* FROM cards c JOIN notes n ON n.id = c.note_id
@@ -141,7 +157,6 @@ app.post('/api/cards/:id/review', { preHandler: auth }, async (req, reply) => {
   const card = db.prepare(`SELECT c.* FROM cards c JOIN notes n ON n.id = c.note_id WHERE c.id = ? AND n.user_id = ?`).get(req.params.id, req.user.uid);
   if (!card) return reply.code(404).send({ error: 'card not found' });
 
-  // 修复：生成 YYYY-MM-DD HH:MM:SS 格式，解决同一天判错的问题
   const days = { again: 0, hard: 1, good: 3, easy: 7 }[grade];
   const next = new Date(Date.now() + days * 86400_000).toISOString().slice(0, 19).replace('T', ' ');
   
@@ -150,9 +165,8 @@ app.post('/api/cards/:id/review', { preHandler: auth }, async (req, reply) => {
 });
 
 // ========== 设置：API Key ==========
-// 注意：前端 SettingsPage 从 v0 起就在调 /api/settings，但后端一直没实现，
-// 请求落到下面的 setNotFoundHandler，被统一回成 { error: 'API not found' } ——
-// 表现就是设置页永远存不进 key，拆卡只能吃 .env 里的那个。这里把两个接口补上。
+// 前端 SettingsPage 一直在调这两个接口，缺了就会掉进下面的 setNotFoundHandler，
+// 被统一回成 { error: 'API not found' }，表现是设置页永远存不进 key。
 app.get('/api/settings', { preHandler: auth }, async (req) => {
   const row = db.prepare('SELECT api_key FROM users WHERE id = ?').get(req.user.uid);
   const key = row?.api_key || '';
@@ -180,6 +194,48 @@ await app.register(fastifyStatic, {
 app.setNotFoundHandler((req, reply) => {
   if (req.raw.url.startsWith('/api')) reply.code(404).send({ error: 'API not found' });
   else reply.sendFile('index.html');
+});
+
+// ========== 版本检查 ==========
+// 真源是 GitHub Release。缓存 10 分钟，免得用户连点把未认证配额（60 次/小时/IP）烧光。
+const RELEASE_REPO = 'xiaolu511/cardbox';
+const VERSION_TTL = 10 * 60 * 1000;
+let versionCache = { at: 0, payload: null };
+
+async function fetchLatestRelease() {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    const res = await fetch(`https://api.github.com/repos/${RELEASE_REPO}/releases/latest`, {
+      headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'Cardbox' },
+      signal: ctrl.signal,
+    });
+    if (!res.ok) throw new Error(`GitHub 返回 ${res.status}`);
+    const rel = await res.json();
+    return {
+      latestVersion: String(rel.tag_name || '').replace(/^v/i, ''),
+      releaseNotes: rel.body || '',
+      downloadUrl: rel.html_url,
+      publishedAt: rel.published_at,
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+app.get('/api/version', async (req, reply) => {
+  if (versionCache.payload && Date.now() - versionCache.at < VERSION_TTL) {
+    return versionCache.payload;
+  }
+  try {
+    const payload = await fetchLatestRelease();
+    versionCache = { at: Date.now(), payload };
+    return payload;
+  } catch (e) {
+    // 断网/被墙时明确报错，让前端显示「检查失败，重试」，不拿假版本糊弄人
+    req.log.warn({ err: e.message }, '获取最新版本失败');
+    return reply.code(502).send({ error: '无法连接 GitHub 获取版本信息' });
+  }
 });
 
 await app.listen({ port: Number(process.env.PORT) || 3000, host: '0.0.0.0' });
