@@ -117,6 +117,12 @@ export default function NotesPage({ active = true }) {
     } finally { setBatchBusy(false); }
   }
 
+  const allSelected = notes.length > 0 && sel.size === notes.length;
+
+  function toggleAll() {
+    setSel(allSelected ? new Set() : new Set(notes.map((n) => n.id)));
+  }
+
   function toggleSel(id) {
     setSel(prev => {
       const next = new Set(prev);
@@ -142,6 +148,11 @@ export default function NotesPage({ active = true }) {
         ) : (
           <>
             <span className="text-sm text-muted">{t('已选 {n} 条', { n: sel.size })}</span>
+            <button
+              onClick={toggleAll}
+              disabled={notes.length === 0}
+              className="px-3 py-2 rounded-lg text-sm text-primary-600 hover:underline disabled:opacity-40"
+            >{allSelected ? t('取消全选') : t('全选')}</button>
             <button
               onClick={() => { if (sel.size) { setSplitCount(3); setSplitTarget({ ids: [...sel] }); } }}
               disabled={sel.size === 0 || batchBusy}

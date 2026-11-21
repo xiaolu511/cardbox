@@ -103,6 +103,23 @@ export default function CardsPage({ active = true }) {
     } finally { setBatchBusy(false); }
   }
 
+  const allCardIds = groups.flatMap((g) => g.cards.map((c) => c.id));
+  const allSelected = allCardIds.length > 0 && sel.size === allCardIds.length;
+
+  function toggleAll() {
+    setSel(allSelected ? new Set() : new Set(allCardIds));
+  }
+
+  function toggleGroup(g) {
+    const ids = g.cards.map((c) => c.id);
+    setSel((prev) => {
+      const next = new Set(prev);
+      const allIn = ids.every((id) => next.has(id));
+      ids.forEach((id) => (allIn ? next.delete(id) : next.add(id)));
+      return next;
+    });
+  }
+
   function toggleSel(id) {
     setSel(prev => {
       const next = new Set(prev);
@@ -141,6 +158,11 @@ export default function CardsPage({ active = true }) {
           <>
             <span className="text-muted">{t('已选 {n} 张', { n: sel.size })}</span>
             <button
+              onClick={toggleAll}
+              disabled={allCardIds.length === 0}
+              className="px-3 py-1.5 rounded-lg text-sm text-primary-600 hover:underline disabled:opacity-40"
+            >{allSelected ? t('取消全选') : t('全选')}</button>
+            <button
               onClick={batchDelete}
               disabled={sel.size === 0 || batchBusy}
               className="px-4 py-1.5 rounded-lg border border-red-300 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
@@ -160,9 +182,20 @@ export default function CardsPage({ active = true }) {
           const open = expanded.has(g.noteId);
           return (
             <div key={g.noteId} className="border border-app rounded-xl overflow-hidden bg-card">
+              <div className="w-full flex items-start gap-3 p-4 hover:bg-black/[0.03] transition-colors">
+                {batchMode && (
+                  <input
+                    type="checkbox"
+                    checked={g.cards.length > 0 && g.cards.every((c) => sel.has(c.id))}
+                    ref={(el) => { if (el) el.indeterminate = g.cards.some((c) => sel.has(c.id)) && !g.cards.every((c) => sel.has(c.id)); }}
+                    onChange={() => toggleGroup(g)}
+                    className="mt-1 w-4 h-4 accent-[var(--custom-primary)] shrink-0"
+                    title={t('选中这条笔记的全部卡片')}
+                  />
+                )}
               <button
                 onClick={() => toggle(g.noteId)}
-                className="w-full flex items-start gap-3 p-4 text-left hover:bg-black/[0.03] transition-colors"
+                className="flex-1 flex items-start gap-3 text-left"
                 aria-expanded={open}
               >
                 <svg
@@ -176,6 +209,7 @@ export default function CardsPage({ active = true }) {
                   {t('{n} 张卡片', { n: g.cards.length })}
                 </span>
               </button>
+              </div>
 
               {open && (
                 <div className="px-4 pb-4 pt-1 grid grid-cols-1 md:grid-cols-2 gap-4">
