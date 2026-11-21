@@ -1,3 +1,7 @@
+// 头像内置进包里：原来指向 github.com/xiaolu511.png，离线或被墙时关于页会变裂图，
+// 而且每次打开都要多一次网络请求。这张是 200px 版本（74KB）。
+import avatarUrl from '../assets/avatar.png';
+
 export default function AboutPage() {
   return (
     <div className="max-w-3xl mx-auto animate-page">
@@ -63,7 +67,7 @@ export default function AboutPage() {
             </h3>
               <div className="flex items-center gap-4 p-4 bg-app border border-app rounded-xl">
               <img 
-                src="https://github.com/xiaolu511.png" 
+                src={avatarUrl} 
                 alt="xiaolu511" 
                 className="w-12 h-12 rounded-full border border-app shadow-sm object-cover bg-white"
               />
