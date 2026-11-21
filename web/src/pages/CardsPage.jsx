@@ -24,6 +24,10 @@ export default function CardsPage({ active = true }) {
   // 🌟 按笔记折叠：默认全收起，搜出结果时全部展开
   const [expanded, setExpanded] = useState(() => new Set());
   const [editing, setEditing] = useState(null);
+  // 批量删除
+  const [batchMode, setBatchMode] = useState(false);
+  const [sel, setSel] = useState(() => new Set());
+  const [batchBusy, setBatchBusy] = useState(false);
 
   async function load(keyword = '', reset = false) {
     if (busyRef.current) return;
@@ -86,6 +90,27 @@ export default function CardsPage({ active = true }) {
     } catch (e) { alert(e.message); }
   }
 
+  async function batchDelete() {
+    if (sel.size === 0) return;
+    if (!confirm(t('确定要删除选中的 {n} 张卡片吗？', { n: sel.size }))) return;
+    setBatchBusy(true);
+    try {
+      for (const id of [...sel]) {
+        try { await api(`/api/cards/${id}`, { method: 'DELETE' }); } catch (e) { alert(e.message); }
+      }
+      setBatchMode(false);
+      await load(q, true);
+    } finally { setBatchBusy(false); }
+  }
+
+  function toggleSel(id) {
+    setSel(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
   function onUpdated(updated) {
     setCards(prev => prev.map(c => (c.id === updated.id ? { ...c, ...updated } : c)));
   }
@@ -105,6 +130,28 @@ export default function CardsPage({ active = true }) {
         />
         <button className="px-5 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors text-sm">{t('搜索')}</button>
       </form>
+
+      <div className="flex items-center gap-3 flex-wrap text-sm">
+        {!batchMode ? (
+          <button
+            onClick={() => setBatchMode(true)}
+            className="px-4 py-1.5 rounded-lg border border-app text-main hover:border-primary-500/60 transition-colors"
+          >{t('批量')}</button>
+        ) : (
+          <>
+            <span className="text-muted">{t('已选 {n} 张', { n: sel.size })}</span>
+            <button
+              onClick={batchDelete}
+              disabled={sel.size === 0 || batchBusy}
+              className="px-4 py-1.5 rounded-lg border border-red-300 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
+            >{t('批量删除')}</button>
+            <button
+              onClick={() => setBatchMode(false)}
+              className="px-4 py-1.5 rounded-lg text-muted hover-item transition-colors"
+            >{t('退出批量')}</button>
+          </>
+        )}
+      </div>
 
       {err && <p className="text-red-500 text-sm">{err}</p>}
 
@@ -135,7 +182,17 @@ export default function CardsPage({ active = true }) {
                   {g.cards.map((c) => (
                     <div key={c.id} className="border border-app rounded-xl p-5 space-y-3 bg-card group hover:shadow-md transition-all flex flex-col h-full relative">
                       <div className="flex justify-between items-start gap-3">
-                        <h3 className="font-bold text-main text-base leading-snug">{c.question}</h3>
+                        <div className="flex items-start gap-2 min-w-0">
+                          {batchMode && (
+                            <input
+                              type="checkbox"
+                              checked={sel.has(c.id)}
+                              onChange={() => toggleSel(c.id)}
+                              className="mt-1 w-4 h-4 accent-[var(--custom-primary)] shrink-0"
+                            />
+                          )}
+                          <h3 className="font-bold text-main text-base leading-snug">{c.question}</h3>
+                        </div>
                         <div className="flex items-center gap-0.5 shrink-0">
                           <button onClick={() => delCard(c.id)} className="p-1.5 rounded-lg text-muted hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100" title={t('删除卡片')}>✕</button>
                           <button
