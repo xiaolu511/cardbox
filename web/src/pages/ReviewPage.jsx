@@ -288,8 +288,8 @@ export default function ReviewPage({ active }) {
 
       {/* 统计卡详情抽屉：挂到 body 上，否则外层 animate-page 的 transform 会把 fixed 的参照系变成那层容器 */}
       {detail && createPortal(
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm animate-page" onClick={() => setDetail(null)}>
-          <div className="w-full max-w-md h-full bg-card border-l border-app shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6 animate-page" onClick={() => setDetail(null)}>
+          <div className="w-full max-w-lg max-h-[70vh] bg-card border border-app rounded-2xl shadow-2xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-start justify-between p-5 border-b border-app">
               <div>
                 <h3 className="font-bold text-main">{detail.title}</h3>
