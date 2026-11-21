@@ -136,7 +136,7 @@ export default function NotesPage({ active = true }) {
       <textarea
         value={text} onChange={(e) => setText(e.target.value)}
         placeholder={t('粘贴一段笔记，比如：TCP 三次握手是为了确认双方收发能力都正常……')}
-        className="w-full h-32 p-3 border border-app bg-transparent text-main rounded-lg font-mono text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder-gray-400"
+        className="w-full h-32 p-3 border border-app bg-transparent text-main rounded-lg font-app text-app leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder-gray-400"
       />
       <div className="flex items-center gap-3 flex-wrap">
         <button onClick={add} className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">{t('保存笔记')}</button>

@@ -31,16 +31,21 @@
   --color-primary-900: color-mix(in srgb, var(--custom-primary) 58%, black);
 }
 
-html, body, #root {
+html { font-size: var(--app-font-size); }
+
+body, #root {
   height: 100%;
   margin: 0;
   overflow: hidden;
   background-color: var(--custom-bg);
   color: var(--custom-text);
-  font-size: var(--app-font-size);
+  font-size: 1rem;
   font-family: var(--app-font-family);
   transition: background-color 0.3s ease, color 0.3s ease;
 }
+
+.font-app { font-family: var(--app-font-family); }
+.text-app { font-size: var(--app-font-size); }
 
 .bg-app { background-color: var(--custom-bg); }
 .bg-sidebar { background-color: var(--custom-sidebar); }

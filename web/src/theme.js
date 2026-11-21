@@ -8,7 +8,7 @@ export const THEME_DEFAULTS = {
   bg: '#f8fafc',
   sidebar: '#ffffff',
   card: '#ffffff',
-  fontSize: '15px',
+  fontSize: '16px',
   fontFamily: '系统默认',
 };
 
