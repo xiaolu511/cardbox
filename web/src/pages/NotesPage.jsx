@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
-import { t, useI18n } from '../i18n';
+import { t, useI18n, getLang } from '../i18n';
 
 // 库里存的是 UTC（'YYYY-MM-DD HH:MM:SS'），直接显示会差 8 小时
 const fmtTime = (s) => {
@@ -67,7 +67,7 @@ export default function NotesPage({ active = true }) {
     setBusyId(id);
     setErr('');
     try {
-      const r = await api(`/api/notes/${id}/cards`, { method: 'POST' });
+      const r = await api(`/api/notes/${id}/cards`, { method: 'POST', body: { lang: getLang() } });
       if (r.created === 0) alert(t('⚠️ 这条笔记之前已经拆过卡了。'));
       else alert(t('🎉 成功拆出 {n} 张卡片！', { n: r.created }));
     } catch (e) { setErr(e.message); } finally { setBusyId(null); }
