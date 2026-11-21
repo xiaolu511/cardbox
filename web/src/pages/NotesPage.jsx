@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 
+// 库里存的是 UTC（'YYYY-MM-DD HH:MM:SS'），直接显示会差 8 小时
+const fmtTime = (s) => {
+  if (!s) return '';
+  const d = new Date(String(s).replace(' ', 'T') + 'Z');
+  if (Number.isNaN(d.getTime())) return s;
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+
 export default function NotesPage({ active = true }) {
   const [text, setText] = useState('');
   const [notes, setNotes] = useState([]);
@@ -87,7 +96,7 @@ export default function NotesPage({ active = true }) {
           <li key={n.id} className="border border-app rounded-xl p-4 bg-card transition-colors duration-300">
             <p className="whitespace-pre-wrap text-sm text-main">{n.raw_text}</p>
             <div className="mt-3 flex items-center gap-4 text-xs border-t border-app pt-3">
-              <span className="text-muted">{n.created_at}</span>
+              <span className="text-muted">{fmtTime(n.created_at)}</span>
               <div className="ml-auto flex gap-4">
                 <button onClick={() => del(n.id)} className="text-muted hover:text-red-500 transition-colors">删除</button>
                 <button onClick={() => split(n.id)} disabled={busyId === n.id} className="text-primary-600 font-medium hover:underline disabled:opacity-50">

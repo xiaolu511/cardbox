@@ -4,7 +4,11 @@
 
 桌面单机应用，数据全部留在本地。
 
-![主界面](docs/screenshot-notes.png)
+![卡片列表](docs/screenshot-cards.png)
+
+| 笔记 | 复习中心 |
+| :---: | :---: |
+| ![笔记](docs/screenshot-notes.png) | ![复习中心](docs/screenshot-review.png) |
 
 ## 功能
 
