@@ -5,7 +5,7 @@ import rateLimit from '@fastify/rate-limit';
 import { z } from 'zod';
 import { db } from './db.js';
 import { hashPassword, verifyPassword } from './auth.js';
-import { splitToCards } from './llm.js';
+import { splitToCards, answerQuestion } from './llm.js';
 import fastifyStatic from '@fastify/static';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -143,6 +143,47 @@ app.delete('/api/cards/:id', { preHandler: auth }, async (req, reply) => {
   const info = db.prepare(`DELETE FROM cards WHERE id = ? AND note_id IN (SELECT id FROM notes WHERE user_id = ?)`).run(req.params.id, req.user.uid);
   if (info.changes === 0) return reply.code(404).send({ error: '卡片不存在' });
   return { ok: true };
+});
+
+// 改卡片的问题/答案（用户在卡片页点了铅笔）
+app.patch('/api/cards/:id', { preHandler: auth }, async (req, reply) => {
+  const { question, answer } = req.body ?? {};
+  const q = typeof question === 'string' ? question.trim() : null;
+  const a = typeof answer === 'string' ? answer.trim() : null;
+  if (q === null && a === null) return reply.code(400).send({ error: '没有要更新的内容' });
+  if (q !== null && (q.length === 0 || q.length > 500)) return reply.code(400).send({ error: '问题不能为空且不超过 500 字' });
+  if (a !== null && (a.length === 0 || a.length > 5000)) return reply.code(400).send({ error: '答案不能为空且不超过 5000 字' });
+
+  const sets = [];
+  const params = [];
+  if (q !== null) { sets.push('question = ?'); params.push(q); }
+  if (a !== null) { sets.push('answer = ?'); params.push(a); }
+  const info = db.prepare(`UPDATE cards SET ${sets.join(', ')} WHERE id = ? AND note_id IN (SELECT id FROM notes WHERE user_id = ?)`)
+    .run(...params, req.params.id, req.user.uid);
+  if (info.changes === 0) return reply.code(404).send({ error: '卡片不存在' });
+
+  const card = db.prepare('SELECT c.*, n.raw_text as note_text FROM cards c JOIN notes n ON n.id = c.note_id WHERE c.id = ?').get(req.params.id);
+  return { data: card };
+});
+
+// 让 AI 按（可能改过的）问题重写这张卡的答案
+app.post('/api/cards/:id/regen', { preHandler: auth }, async (req, reply) => {
+  const { question, lang } = req.body ?? {};
+  const card = db.prepare('SELECT c.*, n.raw_text as note_text FROM cards c JOIN notes n ON n.id = c.note_id WHERE c.id = ? AND n.user_id = ?')
+    .get(req.params.id, req.user.uid);
+  if (!card) return reply.code(404).send({ error: '卡片不存在' });
+
+  const nextQuestion = (typeof question === 'string' && question.trim()) || card.question;
+  if (nextQuestion.length > 500) return reply.code(400).send({ error: '问题不能超过 500 字' });
+
+  try {
+    const user = db.prepare('SELECT api_key FROM users WHERE id = ?').get(req.user.uid);
+    const answer = await answerQuestion(nextQuestion, card.note_text, user?.api_key, lang);
+    db.prepare('UPDATE cards SET question = ?, answer = ? WHERE id = ?').run(nextQuestion, answer, card.id);
+    return { data: { ...card, question: nextQuestion, answer } };
+  } catch (e) {
+    return reply.code(502).send({ error: `AI 重答失败: ${e.message}` });
+  }
 });
 
 // ========== 学习数据看板 ==========

@@ -102,3 +102,68 @@ export async function splitToCards(rawText, apiKey, { retries = 2, lang = 'zhCN'
   }
   throw new Error(`LLM 拆卡失败: ${lastErr?.message}`);
 }
+
+// ========== 单张卡片「重新提问」 ==========
+// 用户在卡片页改了问题之后，可以让 AI 按新问题重写答案，依据是这张卡所属的原文笔记。
+const ANSWER_PROMPTS = {
+  zhCN: `你负责为一张问答卡补写答案。用户会给出「问题」和「原文笔记」。
+规则：
+1. 答案必须依据笔记内容，简洁准确，不超过 80 字；
+2. 语言与笔记原文一致；
+3. 只输出 JSON：{"answer":"..."}，不要解释、不要 markdown 代码块。`,
+  zhTW: `你負責為一張問答卡補寫答案。使用者會給出「問題」和「原文筆記」。
+規則：
+1. 答案必須依據筆記內容，精簡準確，不超過 80 字；
+2. 語言與筆記原文一致；
+3. 只輸出 JSON：{"answer":"..."}，不要解釋、不要 markdown 程式碼區塊。`,
+  en: `You write the answer for a single flashcard. The user gives you a question and the source note.
+Rules:
+1. Base the answer on the note; keep it concise and under 80 words.
+2. Use the same language as the note.
+3. Output JSON only: {"answer":"..."}. No explanations, no markdown fences.`,
+};
+
+const ANSWER_LABELS = {
+  zhCN: { q: '问题', n: '原文笔记' },
+  zhTW: { q: '問題', n: '原文筆記' },
+  en: { q: 'Question', n: 'Source note' },
+};
+
+export async function answerQuestion(question, noteText, apiKey, lang = 'zhCN') {
+  const finalKey = apiKey || process.env.DEEPSEEK_API_KEY;
+  const L = ANSWER_LABELS[lang] || ANSWER_LABELS.zhCN;
+
+  if (!finalKey) {
+    const snippet = String(noteText).slice(0, 40);
+    return { zhCN: `（示例答案，未配置 API Key）按笔记内容：${snippet}`,
+             zhTW: `（範例答案，未設定 API Key）依筆記內容：${snippet}`,
+             en: `(mock answer, no API key) From the note: ${snippet}` }[lang] || snippet;
+  }
+
+  const signal = AbortSignal.timeout(10000);
+  const res = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${finalKey}`,
+    },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [
+        { role: 'system', content: ANSWER_PROMPTS[lang] || ANSWER_PROMPTS.zhCN },
+        { role: 'user', content: `${L.q}：${question}\n\n${L.n}：${noteText}` },
+      ],
+      temperature: 0.3,
+      response_format: { type: 'json_object' },
+    }),
+    signal,
+  });
+
+  if (!res.ok) throw new Error(`LLM ${res.status}: ${await res.text()}`);
+  const data = await res.json();
+  const text = data.choices?.[0]?.message?.content ?? '';
+  const parsed = JSON.parse(extractJson(text));
+  const answer = String(parsed.answer ?? '').trim();
+  if (!answer) throw new Error('AI 没有返回答案');
+  return answer;
+}

@@ -135,6 +135,16 @@ const TW = {
   '本软件基于 MIT 协议开源。': '本軟體基於 MIT 協議開源。',
   '请求超时': '請求逾時',
   '版本信息无效': '版本資訊無效',
+  '{n} 张卡片': '{n} 張卡片',
+  '来自这条笔记': '來自這則筆記',
+  '修改卡片': '修改卡片',
+  '问题': '問題',
+  '让 AI 重答': '讓 AI 重答',
+  'AI 重答中...': 'AI 重答中...',
+  '保存中...': '儲存中...',
+  '取消': '取消',
+  '问题不能为空': '問題不能為空',
+  '答案不能为空': '答案不能為空',
 };
 
 const EN = {
@@ -258,6 +268,16 @@ const EN = {
   '本软件基于 MIT 协议开源。': 'Open source under the MIT license.',
   '请求超时': 'Request timed out',
   '版本信息无效': 'Invalid version info',
+  '{n} 张卡片': '{n} cards',
+  '来自这条笔记': 'From this note',
+  '修改卡片': 'Edit card',
+  '问题': 'Question',
+  '让 AI 重答': 'Ask AI again',
+  'AI 重答中...': 'Asking AI...',
+  '保存中...': 'Saving...',
+  '取消': 'Cancel',
+  '问题不能为空': 'Question cannot be empty',
+  '答案不能为空': 'Answer cannot be empty',
 };
 
 const DICTS = { zhCN: null, zhTW: TW, en: EN };
