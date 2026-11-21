@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../api';
-import { applyTheme, readTheme, saveTheme, getContrastColor, importCustomFont } from '../theme';
+import { applyTheme, readTheme, saveTheme, getContrastColor, importCustomFont, resetTheme } from '../theme';
 import { t, useI18n, setLang, getLang, LANGS } from '../i18n';
 
 const PRESETS = [
@@ -23,6 +23,7 @@ export default function SettingsPage({ active = true }) {
 
   const [fontName, setFontName] = useState(theme.fontFamily);
   const [fontMsg, setFontMsg] = useState('');
+  const [themeMsg, setThemeMsg] = useState('');
   const fileInputRef = useRef(null);
 
   // 切回设置页时重读一次 key 状态（别的窗口/别的设备改过也能同步）
@@ -120,7 +121,14 @@ export default function SettingsPage({ active = true }) {
       {/* 主题外观 */}
       <div className="bg-card rounded-xl shadow-sm border border-app overflow-hidden">
         <div className="px-6 py-4 border-b border-app bg-black/5">
-          <h3 className="font-bold text-primary-600">{t('主题与外观')}</h3>
+          <div className="flex items-center gap-3">
+            <h3 className="font-bold text-primary-600">{t('主题与外观')}</h3>
+            <button
+              onClick={() => { resetTheme(); setTheme(readTheme()); setThemeMsg(t('已恢复默认外观')); setTimeout(() => setThemeMsg(''), 2500); }}
+              className="ml-auto px-3 py-1 text-xs rounded-lg border border-app text-muted hover:text-main hover:border-primary-500/60 transition-colors"
+            >{t('恢复默认')}</button>
+            {themeMsg && <span className="text-xs text-green-600">{themeMsg}</span>}
+          </div>
         </div>
         
         <div className="p-6 space-y-8">

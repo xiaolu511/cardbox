@@ -94,6 +94,17 @@ export function applyTheme(theme) {
   style.setProperty('--app-font-family', fontFamilyToCss(fontFamily));
 }
 
+// 一键恢复默认外观：清掉自定义字体（含已注入的 @font-face）再写回默认值
+export function resetTheme() {
+  try {
+    localStorage.removeItem(KEYS.customFont);
+    localStorage.removeItem(KEYS.fontFamily);
+  } catch { /* 存不了也不影响生效 */ }
+  document.getElementById('cardbox-custom-font')?.remove();
+  saveTheme(THEME_DEFAULTS);
+  applyTheme(THEME_DEFAULTS);
+}
+
 // 自定义字体以 base64 存在 localStorage，刷新后要重新注入 @font-face，否则下次启动就丢
 export function ensureCustomFont() {
   const name = read(KEYS.fontFamily, '');
