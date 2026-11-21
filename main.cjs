@@ -4,6 +4,7 @@ const { fork } = require('child_process');
 const fs = require('fs');
 const http = require('http');
 const crypto = require('crypto');
+const { shell } = require('electron');
 
 let serverProcess;
 
@@ -97,6 +98,13 @@ async function createWindow() {
   // 🌟 当页面准备好渲染时，再让窗口显示
   win.once('ready-to-show', () => {
     win.show();
+  });
+
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('http:') || url.startsWith('https:')) {
+      shell.openExternal(url); // 调用系统浏览器
+    }
+    return { action: 'deny' }; // 拒绝在应用内打开
   });
 
   try {
