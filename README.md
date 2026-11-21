@@ -10,9 +10,13 @@
 
 - **笔记 → 卡片**：粘贴一段文字，DeepSeek 自动拆成多张问答卡片；同一张卡片不会重复生成
 - **间隔重复复习**：again / hard / good / easy 四档打分，按记忆曲线算下次复习时间
+- **复习中心**：今日待复习 / 今日已复习 / 知识库掌握度三张卡，配近 7 天复习活跃度；点开任意一张能看卡片明细，也可以直接「加练」
 - **全文搜索**：SQLite FTS5 三元组索引，中文两字词自动回退 LIKE 匹配，搜「测试」也搜得到
 - **主题自定义**：5 套预设配色 + 四色取色器 + 自定义字体，改动即时生效
+- **检查更新**：从 GitHub Releases 读最新版本，比本地新才提示
 - **本地优先**：SQLite 单文件存储，API Key 只保存在本机，不上传
+
+复习记录由后端 `review_log` 表记账，换机器或清浏览器缓存都不会丢。
 
 ## 技术栈
 
@@ -61,9 +65,21 @@ main.cjs            Electron 主进程：起后端、建窗口、窗口控制 IP
 preload.cjs         通过 contextBridge 暴露最小窗口控制接口
 server/src/         Fastify 服务：认证、笔记、卡片、复习、搜索、设置
 web/src/            React 前端：笔记 / 卡片 / 复习 / 设置 / 关于
+web/src/theme.js    主题与自定义字体的唯一入口，CSS 变量都在这里设
 build/icon.ico      应用图标
 docs/               README 截图
 ```
+
+## 数据存在哪
+
+打包版本的数据库和 JWT 密钥都在 `%APPDATA%\Cardbox\`：
+
+```
+cardbox.db       SQLite 库（笔记、卡片、复习记录、API Key）
+jwt-secret       每台机器首次启动随机生成的登录签名密钥
+```
+
+开发模式默认写到 `server/data/`，可以用 `DB_DIR` 环境变量改到别处。
 
 ## 许可
 
