@@ -82,6 +82,8 @@ async function createWindow() {
   const win = new BrowserWindow({
     width: 1100,
     height: 800,
+    minWidth: 960, // 拖太小会挤成一列，给个下限
+    minHeight: 640,
     title: "Cardbox",
     autoHideMenuBar: true,
     frame: false,
