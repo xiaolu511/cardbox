@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '../api';
 import { t, useI18n, getLang } from '../i18n';
 
@@ -17,6 +18,9 @@ export default function NotesPage({ active = true }) {
   const [notes, setNotes] = useState([]);
   const [err, setErr] = useState('');
   const [busyId, setBusyId] = useState(null);
+  // 拆卡前先问张数；null = 没在选择
+  const [splitTarget, setSplitTarget] = useState(null);
+  const [splitCount, setSplitCount] = useState(3);
   
   // 🌟 分页状态
   const [page, setPage] = useState(1);
@@ -63,14 +67,14 @@ export default function NotesPage({ active = true }) {
     } catch (e) { setErr(e.message); }
   }
 
-  async function split(id) {
+  async function split(id, count) {
     setBusyId(id);
     setErr('');
     try {
-      const r = await api(`/api/notes/${id}/cards`, { method: 'POST', body: { lang: getLang() } });
+      const r = await api(`/api/notes/${id}/cards`, { method: 'POST', body: { lang: getLang(), count } });
       if (r.created === 0) alert(t('⚠️ 这条笔记之前已经拆过卡了。'));
       else alert(t('🎉 成功拆出 {n} 张卡片！', { n: r.created }));
-    } catch (e) { setErr(e.message); } finally { setBusyId(null); }
+    } catch (e) { setErr(e.message); } finally { setBusyId(null); setSplitTarget(null); }
   }
 
   async function del(id) {
@@ -101,7 +105,7 @@ export default function NotesPage({ active = true }) {
               <span className="text-muted">{fmtTime(n.created_at)}</span>
               <div className="ml-auto flex gap-4">
                 <button onClick={() => del(n.id)} className="text-muted hover:text-red-500 transition-colors">{t('删除')}</button>
-                <button onClick={() => split(n.id)} disabled={busyId === n.id} className="text-primary-600 font-medium hover:underline disabled:opacity-50">
+                <button onClick={() => { setSplitTarget(n); setSplitCount(3); }} disabled={busyId === n.id} className="text-primary-600 font-medium hover:underline disabled:opacity-50">
                   {busyId === n.id ? t('AI 拆卡中...') : t('✨ 拆成卡片')}
                 </button>
               </div>
@@ -110,6 +114,42 @@ export default function NotesPage({ active = true }) {
         ))}
       </ul>
       
+      {splitTarget && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6">
+          <div className="w-full max-w-sm bg-card border border-app rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-app">
+              <h3 className="font-bold text-main">{t('拆成卡片')}</h3>
+              <p className="text-xs text-muted mt-1 truncate">{splitTarget.raw_text}</p>
+            </div>
+            <div className="px-5 py-5 space-y-3">
+              <label className="block text-sm font-medium text-main">{t('想要几张卡片？')}</label>
+              <div className="flex items-center gap-2 flex-wrap">
+                {[3, 5, 8, 10].map((n) => (
+                  <button
+                    key={n}
+                    onClick={() => setSplitCount(n)}
+                    className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${splitCount === n ? 'border-primary-500 bg-primary-600/10 text-primary-600 font-medium' : 'border-app text-muted hover:border-primary-500/50'}`}
+                  >{n}</button>
+                ))}
+                <input
+                  type="number" min="1" max="20" value={splitCount}
+                  onChange={(e) => setSplitCount(Math.min(Math.max(Number(e.target.value) || 0, 1), 20))}
+                  className="w-20 px-3 py-1.5 rounded-lg border border-app bg-app text-center text-sm"
+                />
+              </div>
+              <p className="text-xs text-muted">{t('AI 会尽量按这个数量拆，实际以内容为准。')}</p>
+            </div>
+            <div className="px-5 py-4 border-t border-app flex justify-end gap-3">
+              <button onClick={() => setSplitTarget(null)} className="px-4 py-2 rounded-lg text-muted hover-item transition-colors">{t('取消')}</button>
+              <button
+                onClick={() => split(splitTarget.id, splitCount)}
+                disabled={busyId === splitTarget.id}
+                className="px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors disabled:opacity-50"
+              >{busyId === splitTarget.id ? t('AI 拆卡中...') : t('开始拆卡')}</button>
+            </div>
+          </div>
+        </div>, document.body)}
+
       {/* 🌟 加载更多按钮 */}
       {hasMore && (
         <div className="text-center pt-4">

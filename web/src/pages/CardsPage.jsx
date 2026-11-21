@@ -134,9 +134,20 @@ export default function CardsPage({ active = true }) {
                 <div className="px-4 pb-4 pt-1 grid grid-cols-1 md:grid-cols-2 gap-4">
                   {g.cards.map((c) => (
                     <div key={c.id} className="border border-app rounded-xl p-5 space-y-3 bg-card group hover:shadow-md transition-all flex flex-col h-full relative">
-                      <div className="flex justify-between items-start gap-4">
+                      <div className="flex justify-between items-start gap-3">
                         <h3 className="font-bold text-main text-base leading-snug">{c.question}</h3>
-                        <button onClick={() => delCard(c.id)} className="text-muted hover:text-red-500 transition-colors shrink-0 opacity-0 group-hover:opacity-100" title={t('删除卡片')}>✕</button>
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <button onClick={() => delCard(c.id)} className="p-1.5 rounded-lg text-muted hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100" title={t('删除卡片')}>✕</button>
+                          <button
+                            onClick={() => setEditing(c)}
+                            title={t('修改卡片')}
+                            className="p-1.5 rounded-lg text-muted hover:text-primary-600 hover:bg-primary-50 transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897l12.682-12.68z" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                       <p className="text-sm text-muted whitespace-pre-wrap flex-1">{c.answer}</p>
                       <div className="flex flex-wrap gap-2 pt-1">
@@ -145,18 +156,7 @@ export default function CardsPage({ active = true }) {
                           catch { return null; }
                         })()}
                       </div>
-                      <div className="mt-auto pt-4 border-t border-app flex items-center gap-3">
-                        <button
-                          onClick={() => setEditing(c)}
-                          title={t('修改卡片')}
-                          className="p-1.5 rounded-lg text-muted hover:text-primary-600 hover:bg-primary-50 transition-colors"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897l12.682-12.68z" />
-                          </svg>
-                        </button>
-                        <span className="text-xs text-muted truncate" title={c.note_text}>{t('来自这条笔记')}</span>
-                      </div>
+
                     </div>
                   ))}
                 </div>

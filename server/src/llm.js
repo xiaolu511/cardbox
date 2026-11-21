@@ -36,16 +36,24 @@ Rules:
 6. No explanations, no markdown code fences.`,
 };
 
+// 用户指定的卡片数量（0 = 让模型自己决定）
+const COUNT_SUFFIX = {
+  zhCN: (n) => `\n7. 请生成大约 ${n} 张卡片。`,
+  zhTW: (n) => `\n7. 請產生大約 ${n} 張卡片。`,
+  en: (n) => `\n7. Produce approximately ${n} cards.`,
+};
+
 const MOCK_CARDS = {
   zhCN: [{ question: '这是一个测试问题吗？', answer: '是的，因为没有填 API Key。', tags: ['测试'] }],
   zhTW: [{ question: '這是一個測試問題嗎？', answer: '是的，因為沒有填 API Key。', tags: ['測試'] }],
   en: [{ question: 'Is this a test question?', answer: 'Yes — no API key is configured.', tags: ['test'] }],
 };
 
-async function callDeepSeek(rawText, apiKey, lang) {
+async function callDeepSeek(rawText, apiKey, lang, count) {
   // 修复：兜底逻辑，优先用传进来的 key，没有就用 .env 里的
   const finalKey = apiKey || process.env.DEEPSEEK_API_KEY;
-  const prompt = PROMPTS[lang] || PROMPTS.zhCN;
+  const base = PROMPTS[lang] || PROMPTS.zhCN;
+  const prompt = count > 0 ? base + (COUNT_SUFFIX[lang] || COUNT_SUFFIX.zhCN)(count) : base;
 
   if (!finalKey) {
     console.log('[LLM] 未配置 API Key，使用 Mock 数据');
@@ -87,11 +95,11 @@ function extractJson(text) {
   return body.slice(start, end + 1);
 }
 
-export async function splitToCards(rawText, apiKey, { retries = 2, lang = 'zhCN' } = {}) {
+export async function splitToCards(rawText, apiKey, { retries = 2, lang = 'zhCN', count = 0 } = {}) {
   let lastErr;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const text = await callDeepSeek(rawText, apiKey, lang);
+      const text = await callDeepSeek(rawText, apiKey, lang, count);
       const parsed = JSON.parse(extractJson(text));
       const { cards } = CardsSchema.parse(parsed);
       return cards;

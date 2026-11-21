@@ -87,7 +87,9 @@ app.post('/api/notes/:id/cards', { preHandler: auth }, async (req, reply) => {
   if (!note) return reply.code(404).send({ error: '笔记不存在' });
 
   const user = db.prepare('SELECT api_key FROM users WHERE id = ?').get(req.user.uid);
-  const cards = await splitToCards(note.raw_text, user?.api_key, { lang: req.body?.lang });
+  const rawCount = Number(req.body?.count);
+    const count = Number.isFinite(rawCount) ? Math.min(Math.max(Math.trunc(rawCount), 0), 20) : 0;
+    const cards = await splitToCards(note.raw_text, user?.api_key, { lang: req.body?.lang, count });
 
   const insert = db.prepare('INSERT OR IGNORE INTO cards (note_id, question, answer, tags) VALUES (?, ?, ?, ?)');
   let createdCount = 0;
