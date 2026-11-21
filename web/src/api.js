@@ -37,3 +37,25 @@ export async function api(path, { method = 'GET', body } = {}) {
   }
   return res.status === 204 ? null : res.json();
 }
+
+// multipart 上传（导入文档用）。注意别手动设 Content-Type，浏览器要自己带 boundary。
+export async function upload(path, file) {
+  const fd = new FormData();
+  fd.append('file', file, file.name);
+
+  const headers = {};
+  const token = getToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(path, { method: 'POST', headers, body: fd });
+  if (res.status === 401 && token) {
+    setToken(null);
+    if (unauthorizedHandler) unauthorizedHandler();
+    throw new Error('登录已过期，请重新登录');
+  }
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `HTTP ${res.status}`);
+  }
+  return res.json();
+}

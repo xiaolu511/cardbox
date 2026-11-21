@@ -43,6 +43,12 @@ const COUNT_SUFFIX = {
   en: (n) => `\n7. Produce approximately ${n} cards.`,
 };
 
+const OUTLINE_PROMPTS = {
+  zhCN: '把下面这段笔记提炼成要点清单：每条一行、以「- 」开头、不超过 20 字，最多 10 条。只输出清单，不要任何解释。',
+  zhTW: '把下面這段筆記提煉成要點清單：每條一行、以「- 」開頭、不超過 20 字，最多 10 條。只輸出清單，不要任何解釋。',
+  en: 'Turn the note below into a bullet list of key points: one per line, starting with "- ", at most 20 words each, max 10 items. Output the list only, no explanation.',
+};
+
 const MOCK_CARDS = {
   zhCN: [{ question: '这是一个测试问题吗？', answer: '是的，因为没有填 API Key。', tags: ['测试'] }],
   zhTW: [{ question: '這是一個測試問題嗎？', answer: '是的，因為沒有填 API Key。', tags: ['測試'] }],
@@ -174,4 +180,30 @@ export async function answerQuestion(question, noteText, apiKey, lang = 'zhCN') 
   const answer = String(parsed.answer ?? '').trim();
   if (!answer) throw new Error('AI 没有返回答案');
   return answer;
+}
+// 先把笔记压成要点，再拿要点去拆卡：卡片会更聚焦，也不容易漏主题
+export async function extractOutline(rawText, apiKey, { lang = 'zhCN' } = {}) {
+  const finalKey = apiKey || process.env.DEEPSEEK_API_KEY;
+  if (!finalKey) {
+    const lines = String(rawText).split(/[。\n！？.!?]/).map((x) => x.trim()).filter(Boolean).slice(0, 3);
+    return lines.map((x) => '- ' + x.slice(0, 20)).join('\n');
+  }
+
+  const res = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${finalKey}` },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [
+        { role: 'system', content: OUTLINE_PROMPTS[lang] || OUTLINE_PROMPTS.zhCN },
+        { role: 'user', content: rawText },
+      ],
+      temperature: 0.2,
+    }),
+    signal: AbortSignal.timeout(20000),
+  });
+
+  if (!res.ok) throw new Error('提炼要点失败：HTTP ' + res.status);
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content?.trim() || '';
 }

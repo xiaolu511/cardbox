@@ -5,7 +5,9 @@ import rateLimit from '@fastify/rate-limit';
 import { z } from 'zod';
 import { db } from './db.js';
 import { hashPassword, verifyPassword } from './auth.js';
-import { splitToCards, answerQuestion } from './llm.js';
+import { splitToCards, answerQuestion, extractOutline } from './llm.js';
+import { extractText } from './extract.js';
+import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -18,6 +20,8 @@ await app.register(jwt, { secret: process.env.JWT_SECRET || 'dev-secret', sign: 
 // 只对显式声明 config.rateLimit 的路由生效（目前是登录/注册）。
 // global 开着的话静态文件、/health 也计入同一个 IP 桶，刷新十几次页面就 429、整页变成一行 JSON。
 await app.register(rateLimit, { global: false });
+// 导入文档：单个文件上限 10MB，只允许一次传一个
+await app.register(multipart, { limits: { fileSize: 10 * 1024 * 1024, files: 1 } });
 
 app.get('/health', async () => ({ ok: true }));
 
@@ -81,6 +85,24 @@ app.delete('/api/notes/:id', { preHandler: auth }, async (req, reply) => {
   return { ok: true };
 });
 
+// ========== 文件导入 ==========
+app.post('/api/extract', { preHandler: auth }, async (req, reply) => {
+  const file = await req.file();
+  if (!file) return reply.code(400).send({ error: '没有收到文件' });
+
+  const buffer = await file.toBuffer();
+  try {
+    const text = await extractText(buffer, file.filename);
+    const trimmed = String(text || '').trim();
+    if (!trimmed) {
+      return reply.code(422).send({ error: '这个文件里没读到文字，可能是扫描件（需要 OCR，暂不支持）' });
+    }
+    return { filename: file.filename, text: trimmed.slice(0, 20000), chars: trimmed.length };
+  } catch (e) {
+    return reply.code(400).send({ error: e.message });
+  }
+});
+
 // ========== 拆卡 ==========
 app.post('/api/notes/:id/cards', { preHandler: auth }, async (req, reply) => {
   const note = db.prepare('SELECT * FROM notes WHERE id = ? AND user_id = ?').get(req.params.id, req.user.uid);
@@ -88,8 +110,16 @@ app.post('/api/notes/:id/cards', { preHandler: auth }, async (req, reply) => {
 
   const user = db.prepare('SELECT api_key FROM users WHERE id = ?').get(req.user.uid);
   const rawCount = Number(req.body?.count);
-    const count = Number.isFinite(rawCount) ? Math.min(Math.max(Math.trunc(rawCount), 0), 20) : 0;
-    const cards = await splitToCards(note.raw_text, user?.api_key, { lang: req.body?.lang, count });
+  const count = Number.isFinite(rawCount) ? Math.min(Math.max(Math.trunc(rawCount), 0), 20) : 0;
+
+  // outline = true：先提炼要点，再按要点拆卡
+  let source = note.raw_text;
+  if (req.body?.outline) {
+    const outline = await extractOutline(note.raw_text, user?.api_key, { lang: req.body?.lang });
+    if (outline) source = `以下是这段笔记的要点，请围绕它们出题：\n${outline}`;
+  }
+
+  const cards = await splitToCards(source, user?.api_key, { lang: req.body?.lang, count });
 
   const insert = db.prepare('INSERT OR IGNORE INTO cards (note_id, question, answer, tags) VALUES (?, ?, ?, ?)');
   let createdCount = 0;

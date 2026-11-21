@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { api } from '../api';
+import { api, upload } from '../api';
 import { t, useI18n, getLang } from '../i18n';
 
 // 库里存的是 UTC（'YYYY-MM-DD HH:MM:SS'），直接显示会差 8 小时
@@ -21,6 +21,9 @@ export default function NotesPage({ active = true }) {
   // 拆卡前先问张数；null = 没在选择。ids 可能是一条，也可能是批量选中的多条。
   const [splitTarget, setSplitTarget] = useState(null);
   const [splitCount, setSplitCount] = useState(3);
+  const [useOutline, setUseOutline] = useState(false);
+  const [importMsg, setImportMsg] = useState('');
+  const fileRef = useRef(null);
   // 批量模式
   const [batchMode, setBatchMode] = useState(false);
   const [sel, setSel] = useState(() => new Set());
@@ -74,6 +77,23 @@ export default function NotesPage({ active = true }) {
     } catch (e) { setErr(e.message); }
   }
 
+  async function onPickFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setImportMsg(t('正在读取 {name}...', { name: file.name }));
+    setErr('');
+    try {
+      const r = await upload('/api/extract', file);
+      setText(r.text);
+      setImportMsg(t('已导入 {name}，共 {n} 字', { name: r.filename, n: r.chars }));
+      setTimeout(() => setImportMsg(''), 4000);
+    } catch (err) {
+      setImportMsg('');
+      setErr(err.message);
+    }
+  }
+
   async function split(ids, count) {
     setErr('');
     const list = Array.isArray(ids) ? ids : [ids];
@@ -82,7 +102,7 @@ export default function NotesPage({ active = true }) {
     try {
       for (const id of list) {
         try {
-          const r = await api(`/api/notes/${id}/cards`, { method: 'POST', body: { lang: getLang(), count } });
+          const r = await api(`/api/notes/${id}/cards`, { method: 'POST', body: { lang: getLang(), count, outline: useOutline } });
           ok += r.created || 0;
         } catch (e) { setErr(e.message); }
       }
@@ -140,6 +160,14 @@ export default function NotesPage({ active = true }) {
       />
       <div className="flex items-center gap-3 flex-wrap">
         <button onClick={add} className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">{t('保存笔记')}</button>
+        <input
+          type="file" ref={fileRef} onChange={onPickFile} className="hidden"
+          accept=".txt,.md,.markdown,.docx,.pdf"
+        />
+        <button
+          onClick={() => fileRef.current.click()}
+          className="px-4 py-2 rounded-lg border border-app text-main hover:border-primary-500/60 transition-colors"
+        >{t('导入文件')}</button>
         {!batchMode ? (
           <button
             onClick={() => setBatchMode(true)}
@@ -169,6 +197,7 @@ export default function NotesPage({ active = true }) {
             >{t('退出批量')}</button>
           </>
         )}
+        {importMsg && <span className="text-sm text-muted">{importMsg}</span>}
         {err && <span className="text-red-500 text-sm">{err}</span>}
       </div>
       <ul className="space-y-3">
@@ -239,6 +268,14 @@ export default function NotesPage({ active = true }) {
                 />
               </div>
               <p className="text-xs text-muted">{t('AI 会尽量按这个数量拆，实际以内容为准。')}</p>
+              <label className="flex items-center gap-2 text-sm text-main cursor-pointer">
+                <input
+                  type="checkbox" checked={useOutline}
+                  onChange={(e) => setUseOutline(e.target.checked)}
+                  className="w-4 h-4 accent-[var(--custom-primary)]"
+                />
+                {t('先提炼要点再拆卡（更聚焦，慢一点）')}
+              </label>
             </div>
             <div className="px-5 py-4 border-t border-app flex justify-end gap-3">
               <button onClick={() => setSplitTarget(null)} className="px-4 py-2 rounded-lg text-muted hover-item transition-colors">{t('取消')}</button>
