@@ -6,21 +6,18 @@ Feed a rough note to the AI and get back question-and-answer flashcards, schedul
 
 A single-user desktop app. All data stays on your machine.
 
-![Card list](docs/app-cards.png)
-
-| Notes | Review Center |
-| :---: | :---: |
-| ![Notes](docs/app-notes.png) | ![Review Center](docs/app-review.png) |
-| **Theme settings** | **About** |
-| ![Settings](docs/app-settings.png) | ![About](docs/app-about.png) |
-
 ## Features
 
 - **Notes → cards**: paste text and DeepSeek splits it into Q&A cards; the same card is never generated twice
+- **File import**: `.txt / .md / .docx / .pdf` (≤10MB each), text lands straight in the editor
+- **Outline first**: optionally condense a long document into key points before generating cards
+- **Card count**: ask for 3/5/8/10 or any custom number of cards
+- **Fold & batch**: long notes collapse to four lines; notes and cards support multi-select, select-all and bulk delete, and notes can be split in bulk
 - **Spaced repetition**: again / hard / good / easy, each with its own next-review date
 - **Review Center**: due today / reviewed today / mastery, plus a 7-day activity chart. Click any card to see the list and drill those cards again
 - **Full-text search**: SQLite FTS5 trigram index, with automatic LIKE fallback for short Chinese queries
-- **Theming**: 5 presets, four colour pickers and custom fonts, applied instantly
+- **Theming**: 5 presets, four colour pickers and custom fonts, applied instantly, with one-click reset
+- **Font scaling**: 12–24px, applied to the whole UI including inputs
 - **Update check**: reads the latest GitHub Release and only prompts when it is newer than your build
 - **Local first**: one SQLite file, API key never leaves the machine
 
@@ -71,12 +68,12 @@ npm run build:app            # → dist/Cardbox Setup <version>.exe
 ```
 main.cjs            Electron main process: starts the backend, creates the window, window-control IPC
 preload.cjs         Minimal window-control bridge via contextBridge
-server/src/         Fastify service: auth, notes, cards, review, search, settings
+server/src/         Fastify service: auth, notes, cards, review, search, settings, import
+server/src/extract.js  txt / md / docx / pdf to plain text
 web/src/            React frontend: notes / cards / review / settings / about
 web/src/theme.js    Single entry point for theme and custom fonts (all CSS variables are set here)
 web/src/i18n.js     Translations: zh-CN / zh-TW / en
 build/icon.ico      App icon
-docs/               README screenshots
 ```
 
 ## Where the data lives
