@@ -143,13 +143,77 @@ app.delete('/api/cards/:id', { preHandler: auth }, async (req, reply) => {
   return { ok: true };
 });
 
+// ========== 学习数据看板 ==========
+app.get('/api/stats', { preHandler: auth }, async (req) => {
+  // 1. 待复习（今天到期或已过期）
+  const { due } = db.prepare(`
+    SELECT count(*) as due FROM cards c JOIN notes n ON n.id = c.note_id
+    WHERE n.user_id = ? AND (c.next_review IS NULL OR datetime(c.next_review) <= datetime('now'))
+  `).get(req.user.uid);
+
+  // 2. 已掌握：最近一次评分是「记得」或「太简单」。
+  //    之前用的是 datetime(next_review) > now+7d，而 easy 的间隔正好是 7 天，
+  //    等值永远不通过 → 已掌握恒为 0。按最近一次评分记账更稳定，也不会随日期漂移。
+  const { mastered } = db.prepare(`
+    SELECT count(*) as mastered FROM cards c JOIN notes n ON n.id = c.note_id
+    WHERE n.user_id = ? AND (
+      SELECT r.grade FROM review_log r WHERE r.card_id = c.id
+      ORDER BY r.graded_at DESC, r.id DESC LIMIT 1
+    ) IN ('good', 'easy')
+  `).get(req.user.uid);
+
+  // 3. 总卡片数
+  const { total } = db.prepare(`
+    SELECT count(*) as total FROM cards c JOIN notes n ON n.id = c.note_id WHERE n.user_id = ?
+  `).get(req.user.uid);
+
+  // 4. 今日已复习（本地时区）
+  const { todayReviewed } = db.prepare(`
+    SELECT count(*) as todayReviewed FROM review_log r
+    JOIN cards c ON c.id = r.card_id JOIN notes n ON n.id = c.note_id
+    WHERE n.user_id = ? AND date(r.graded_at, 'localtime') = date('now', 'localtime')
+  `).get(req.user.uid);
+
+  // 5. 近 7 天活跃度（本地时区，由后端按天聚合）
+  const rows = db.prepare(`
+    SELECT date(r.graded_at, 'localtime') as d, count(*) as c FROM review_log r
+    JOIN cards c ON c.id = r.card_id JOIN notes n ON n.id = c.note_id
+    WHERE n.user_id = ? AND date(r.graded_at, 'localtime') >= date('now', 'localtime', '-6 days')
+    GROUP BY d
+  `).all(req.user.uid);
+  const byDay = new Map(rows.map((r) => [r.d, r.c]));
+  const pad = (v) => String(v).padStart(2, '0');
+  const last7d = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    last7d.push({ date: key, count: byDay.get(key) || 0 });
+  }
+
+  return { due, mastered, total, todayReviewed, last7d };
+});
+
 // ========== 复习功能 ==========
 app.get('/api/review', { preHandler: auth }, async (req) => {
-  return db.prepare(`
+  const noteId = req.query.note_id;
+  
+  let query = `
     SELECT c.* FROM cards c JOIN notes n ON n.id = c.note_id
     WHERE n.user_id = ? AND (c.next_review IS NULL OR datetime(c.next_review) <= datetime('now'))
-    ORDER BY c.next_review IS NULL DESC, c.next_review ASC LIMIT 20
-  `).all(req.user.uid);
+  `;
+  let params = [req.user.uid];
+
+  // 🌟 如果传了 note_id，就只复习这篇笔记里的卡
+  if (noteId && noteId !== 'all') {
+    query += ` AND c.note_id = ?`;
+    params.push(noteId);
+  }
+
+  // 不截断：仪表盘显示的「今日待复习」就是这个接口的条数，两处口径必须一致。
+  query += ` ORDER BY c.next_review IS NULL DESC, c.next_review ASC`;
+  
+  return db.prepare(query).all(...params);
 });
 
 app.post('/api/cards/:id/review', { preHandler: auth }, async (req, reply) => {
@@ -161,6 +225,8 @@ app.post('/api/cards/:id/review', { preHandler: auth }, async (req, reply) => {
   const next = new Date(Date.now() + days * 86400_000).toISOString().slice(0, 19).replace('T', ' ');
   
   db.prepare('UPDATE cards SET next_review = ? WHERE id = ?').run(next, card.id);
+  db.prepare('INSERT INTO review_log (card_id, grade, graded_at) VALUES (?, ?, ?)')
+    .run(card.id, grade, new Date().toISOString().slice(0, 19).replace('T', ' '));
   return { next_review: next };
 });
 

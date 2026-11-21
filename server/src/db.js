@@ -38,6 +38,16 @@ CREATE TABLE IF NOT EXISTS cards (
 CREATE INDEX IF NOT EXISTS idx_notes_user ON notes(user_id);
 CREATE INDEX IF NOT EXISTS idx_cards_note ON cards(note_id);
 CREATE INDEX IF NOT EXISTS idx_cards_next ON cards(next_review);
+-- 复习流水：仪表盘的「近 7 天」「今日已复习」「已掌握」都从这里算，
+-- 不再依赖浏览器 localStorage（换机、清缓存就归零）。
+CREATE TABLE IF NOT EXISTS review_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  card_id INTEGER NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+  grade TEXT NOT NULL,
+  graded_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_review_log_card ON review_log(card_id, graded_at);
+CREATE INDEX IF NOT EXISTS idx_review_log_time ON review_log(graded_at);
 `);
 
 // 2. 修复重复拆卡：给 (note_id, question) 加唯一索引
