@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { api } from '../api';
 
 const GRADE_CONFIG = [
@@ -38,6 +39,9 @@ export default function ReviewPage({ active }) {
 
   // 本轮复习的临时战报（只活在内存里，刷新即清）
   const [session, setSession] = useState({ done: 0, details: [] });
+
+  // 三张统计卡点开的详情抽屉
+  const [detail, setDetail] = useState(null); // { type, title, items, loading, error }
 
   // 🌟 加载主页数据
   const loadDashboard = useCallback(async () => {
@@ -89,6 +93,28 @@ export default function ReviewPage({ active }) {
 
   const card = queue[idx];
 
+  // 点开统计卡：拉这批卡的清单
+  const openDetail = async (type, title) => {
+    setDetail({ type, title, items: [], loading: true, error: '' });
+    try {
+      const items = await api(`/api/stats/cards?type=${type}`);
+      setDetail({ type, title, items, loading: false, error: '' });
+    } catch (e) {
+      setDetail({ type, title, items: [], loading: false, error: e.message });
+    }
+  };
+
+  // 加练：直接拿详情里的这批卡当队列，走正常复习流程（评分照常写流水、推后下次时间）
+  const startExtra = () => {
+    if (!detail || detail.items.length === 0) return;
+    setQueue(detail.items);
+    setIdx(0);
+    setFlipped(false);
+    setSession({ done: 0, details: [] });
+    setDetail(null);
+    setView('session');
+  };
+
   const grade = useCallback(async (g) => {
     if (!card) return;
     try {
@@ -131,12 +157,16 @@ export default function ReviewPage({ active }) {
     const weekTotal = chartData.reduce((sum, d) => sum + d.count, 0);
 
     return (
+      <>
       <div className="max-w-4xl mx-auto animate-page">
         <h2 className="text-2xl font-bold text-main mb-6">复习中心</h2>
         
         {/* 数据面板 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-card border border-app p-6 rounded-2xl shadow-sm relative overflow-hidden">
+          <div
+            onClick={() => openDetail('due', '今日待复习')}
+            className="bg-card border border-app p-6 rounded-2xl shadow-sm relative overflow-hidden cursor-pointer transition-colors hover:border-primary-500/40"
+          >
             <div className="absolute top-0 right-0 p-4 opacity-10">
               <svg className="w-16 h-16 text-primary-600" fill="currentColor" viewBox="0 0 20 20"><path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z"></path></svg>
             </div>
@@ -147,7 +177,10 @@ export default function ReviewPage({ active }) {
             </div>
           </div>
 
-          <div className="bg-card border border-app p-6 rounded-2xl shadow-sm relative overflow-hidden">
+          <div
+            onClick={() => openDetail('today', '今日已复习')}
+            className="bg-card border border-app p-6 rounded-2xl shadow-sm relative overflow-hidden cursor-pointer transition-colors hover:border-primary-500/40"
+          >
             <div className="absolute top-0 right-0 p-4 opacity-10">
               <svg className="w-16 h-16 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path></svg>
             </div>
@@ -158,7 +191,10 @@ export default function ReviewPage({ active }) {
             </div>
           </div>
 
-          <div className="bg-card border border-app p-6 rounded-2xl shadow-sm relative overflow-hidden">
+          <div
+            onClick={() => openDetail('mastered', '已掌握')}
+            className="bg-card border border-app p-6 rounded-2xl shadow-sm relative overflow-hidden cursor-pointer transition-colors hover:border-primary-500/40"
+          >
             <p className="text-sm font-medium text-muted mb-1">知识库掌握度</p>
             <div className="flex items-baseline gap-2">
               <p className="text-4xl font-bold text-main">{masteryRate}%</p>
@@ -167,7 +203,15 @@ export default function ReviewPage({ active }) {
             <div className="mt-3 h-2 w-full bg-app rounded-full overflow-hidden">
               <div className="h-full bg-primary-600 rounded-full transition-all duration-1000" style={{ width: `${masteryRate}%` }} />
             </div>
-            <p className="text-xs text-muted mt-2">已掌握 {serverStats.mastered} / 总计 {serverStats.total} 张</p>
+            <p className="text-xs text-muted mt-2">
+              已掌握 {serverStats.mastered} / 总计 {serverStats.total} 张
+              <button
+                onClick={(e) => { e.stopPropagation(); openDetail('unmastered', '未掌握'); }}
+                className="ml-2 text-primary-600 hover:underline"
+              >
+                看未掌握
+              </button>
+            </p>
           </div>
         </div>
 
@@ -241,8 +285,49 @@ export default function ReviewPage({ active }) {
           </div>
         </div>
       </div>
-    );
-  }
+
+      {/* 统计卡详情抽屉：挂到 body 上，否则外层 animate-page 的 transform 会把 fixed 的参照系变成那层容器 */}
+      {detail && createPortal(
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm animate-page" onClick={() => setDetail(null)}>
+          <div className="w-full max-w-md h-full bg-card border-l border-app shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between p-5 border-b border-app">
+              <div>
+                <h3 className="font-bold text-main">{detail.title}</h3>
+                <p className="text-xs text-muted mt-0.5">
+                  {detail.loading ? '加载中…' : `共 ${detail.items.length} 张`}
+                </p>
+              </div>
+              <button onClick={() => setDetail(null)} className="p-1.5 hover:bg-app rounded-lg text-muted hover:text-main transition-colors">✕</button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {detail.error && <p className="text-xs text-red-500">{detail.error}</p>}
+              {!detail.loading && !detail.error && detail.items.length === 0 && (
+                <p className="text-sm text-muted text-center mt-10">这个分类下还没有卡片</p>
+              )}
+              {detail.items.map(c => (
+                <div key={c.id} className="p-3 bg-app border border-app rounded-xl">
+                  <p className="text-sm font-medium text-main">{c.question}</p>
+                  <p className="text-xs text-muted mt-1 line-clamp-2">{c.answer}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="p-4 border-t border-app">
+              <button
+                onClick={startExtra}
+                disabled={detail.loading || detail.items.length === 0}
+                className="w-full py-2.5 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                加练这 {detail.items.length} 张
+              </button>
+            </div>
+          </div>
+        </div>
+      , document.body)}
+    </>
+  );
+}
 
   // ================= 视图 3：结算战报页 =================
   if (view === 'summary') {

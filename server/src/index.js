@@ -194,6 +194,39 @@ app.get('/api/stats', { preHandler: auth }, async (req) => {
   return { due, mastered, total, todayReviewed, last7d };
 });
 
+// 复习中心三张卡的详情列表：type = due | today | mastered | unmastered
+app.get('/api/stats/cards', { preHandler: auth }, async (req, reply) => {
+  const type = req.query.type || 'due';
+  const uid = req.user.uid;
+
+  const base = `
+    SELECT c.id, c.question, c.answer, c.next_review, c.note_id
+    FROM cards c JOIN notes n ON n.id = c.note_id
+    WHERE n.user_id = ?`;
+  // 最近一次评分，用来判断「已掌握」
+  const lastGrade = `(SELECT r.grade FROM review_log r WHERE r.card_id = c.id
+                      ORDER BY r.graded_at DESC, r.id DESC LIMIT 1)`;
+
+  let sql;
+  if (type === 'due') {
+    sql = `${base} AND (c.next_review IS NULL OR datetime(c.next_review) <= datetime('now'))
+           ORDER BY c.next_review IS NULL DESC, c.next_review ASC`;
+  } else if (type === 'today') {
+    sql = `${base} AND EXISTS (
+             SELECT 1 FROM review_log r
+             WHERE r.card_id = c.id AND date(r.graded_at, 'localtime') = date('now', 'localtime')
+           ) ORDER BY c.id DESC`;
+  } else if (type === 'mastered') {
+    sql = `${base} AND ${lastGrade} IN ('good', 'easy') ORDER BY c.id DESC`;
+  } else if (type === 'unmastered') {
+    sql = `${base} AND (${lastGrade} IS NULL OR ${lastGrade} NOT IN ('good', 'easy')) ORDER BY c.id DESC`;
+  } else {
+    return reply.code(400).send({ error: '未知的 type' });
+  }
+
+  return db.prepare(sql).all(uid);
+});
+
 // ========== 复习功能 ==========
 app.get('/api/review', { preHandler: auth }, async (req) => {
   const noteId = req.query.note_id;
