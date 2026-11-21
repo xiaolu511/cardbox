@@ -78,19 +78,25 @@ function waitForServer(url, maxAttempts = 15) {
 }
 
 async function createWindow() {
-    const win = new BrowserWindow({
+  const win = new BrowserWindow({
     width: 1100,
     height: 800,
     title: "Cardbox",
-    frame: false,               // 🌟 去掉原生的外部边框
-    titleBarStyle: 'hidden',    // 🌟 隐藏原生标题栏
     autoHideMenuBar: true,
-    show: true, 
+    frame: false,
+    titleBarStyle: 'hidden',
+    show: false, // 🌟 核心：先隐藏窗口，杜绝白屏闪烁
+    backgroundColor: '#f8fafc', // 🌟 给个初始底色（或者读取用户的深色主题色）
     webPreferences: {
-      preload: path.join(__dirname, 'preload.cjs'), // 🌟 新增：用来调用系统控制
+      preload: path.join(__dirname, 'preload.cjs'),
       nodeIntegration: false,
       contextIsolation: true
     }
+  });
+
+  // 🌟 当页面准备好渲染时，再让窗口显示
+  win.once('ready-to-show', () => {
+    win.show();
   });
 
   try {
@@ -98,16 +104,14 @@ async function createWindow() {
     await waitForServer('http://localhost:3000/health');
     console.log('后端启动成功，加载页面...');
     win.loadURL('http://localhost:3000');
-    win.show(); // 🌟 显示窗口
   } catch (e) {
     console.error(e);
     win.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(`
-      <div style="padding: 40px; font-family: sans-serif;">
+      <div style="padding: 40px; font-family: sans-serif; color: #dc2626;">
         <h2>❌ 后端启动失败</h2>
-        <p>请检查 server 目录是否完整，或重新安装软件。</p>
+        <p>请检查依赖或杀毒软件拦截。</p>
       </div>
     `));
-    win.show();
   }
 }
 
