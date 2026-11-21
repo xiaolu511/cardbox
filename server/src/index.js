@@ -15,7 +15,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 await app.register(cors, { origin: true });
 await app.register(jwt, { secret: process.env.JWT_SECRET || 'dev-secret', sign: { expiresIn: '7d' } });
-await app.register(rateLimit, { max: 100, timeWindow: '1 minute' });
+// 只对显式声明 config.rateLimit 的路由生效（目前是登录/注册）。
+// global 开着的话静态文件、/health 也计入同一个 IP 桶，刷新十几次页面就 429、整页变成一行 JSON。
+await app.register(rateLimit, { global: false });
 
 app.get('/health', async () => ({ ok: true }));
 
