@@ -1,7 +1,7 @@
 {
   "name": "cardbox",
   "version": "1.0.1",
-  "author": "xiaolu5112",
+  "author": "xiaolu511",
   "description": "AI 卡片笔记",
   "main": "main.cjs",
   "scripts": {
