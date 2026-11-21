@@ -6,6 +6,34 @@
 
 桌面单机应用，数据全部留在本地。
 
+## 运行结构
+
+```
+Electron 外壳
+  └─ main.cjs   起一个本地 Fastify 服务，等 /health 通了自己再加载页面
+       └─ server/   只监听 127.0.0.1:3000，顺便托管前端静态文件
+            └─ React 前端
+```
+
+数据流向：
+
+```
+笔记原文 / 导入文件 / 拆卡请求
+        │
+        ▼
+  Fastify :3000 ──► DeepSeek API        拆卡、重答、提炼要点
+        │
+        ├──► mammoth / pdf-parse        docx、pdf → 纯文本
+        │
+        ▼
+  SQLite 单文件（%APPDATA%\Cardbox\cardbox.db）
+   ├ users        账号、口令哈希、API Key
+   ├ notes        原始笔记
+   ├ cards        问答卡片、next_review 下次复习时间
+   ├ review_log   每次评分记录，「已掌握」和七日图都从这里算
+   └ cards_fts    FTS5 三元组全文索引
+```
+
 ## 功能
 
 - **笔记 → 卡片**：粘贴一段文字，DeepSeek 自动拆成多张问答卡片；同一张卡片不会重复生成

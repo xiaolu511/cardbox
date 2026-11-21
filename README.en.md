@@ -6,6 +6,34 @@ Feed a rough note to the AI and get back question-and-answer flashcards, schedul
 
 A single-user desktop app. All data stays on your machine.
 
+## How it runs
+
+```
+Electron shell
+  └─ main.cjs   starts a local Fastify server and only loads the page once /health responds
+       └─ server/   listens on 127.0.0.1:3000 only, and serves the built frontend
+            └─ React frontend
+```
+
+Data flow:
+
+```
+note text / imported file / split request
+        │
+        ▼
+  Fastify :3000 ──► DeepSeek API        split into cards, re-answer, outline
+        │
+        ├──► mammoth / pdf-parse        docx, pdf → plain text
+        │
+        ▼
+  single SQLite file (%APPDATA%\Cardbox\cardbox.db)
+   ├ users        account, password hash, API key
+   ├ notes        raw notes
+   ├ cards        Q&A cards with next_review
+   ├ review_log   every grading, source of "mastered" and the 7-day chart
+   └ cards_fts    FTS5 trigram full-text index
+```
+
 ## Features
 
 - **Notes → cards**: paste text and DeepSeek splits it into Q&A cards; the same card is never generated twice
