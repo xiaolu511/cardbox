@@ -12,6 +12,16 @@ const fmtTime = (s) => {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
 };
 
+const isLongNote = (v) => String(v || '').length > 200 || String(v || '').split('\n').length > 6;
+
+const previewOf = (v) => {
+  const raw = String(v || '');
+  const lines = raw.split('\n').map((l) => l.trim()).filter(Boolean);
+  const head = lines.slice(0, 4).join('\n');
+  const cut = lines.length > 4 || head.length < raw.trim().length;
+  return cut ? head + '…' : head;
+};
+
 export default function NotesPage({ active = true }) {
   useI18n();
   const [text, setText] = useState('');
@@ -27,6 +37,12 @@ export default function NotesPage({ active = true }) {
   // 批量模式
   const [batchMode, setBatchMode] = useState(false);
   const [sel, setSel] = useState(() => new Set());
+  const [expanded, setExpanded] = useState(() => new Set());
+  const toggleExpand = (id) => setExpanded((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
   const [batchBusy, setBatchBusy] = useState(false);
 
   // 🌟 分页状态
@@ -218,7 +234,17 @@ export default function NotesPage({ active = true }) {
                 />
               )}
               <div className="min-w-0 flex-1">
-                <p className="whitespace-pre-wrap text-sm text-main">{n.raw_text}</p>
+                <p className="whitespace-pre-wrap text-sm text-main">
+                  {expanded.has(n.id) ? n.raw_text : previewOf(n.raw_text)}
+                </p>
+                {isLongNote(n.raw_text) && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); toggleExpand(n.id); }}
+                    className="mt-1 text-xs text-primary-600 hover:underline"
+                  >
+                    {expanded.has(n.id) ? t('收起') : t('展开全部')}
+                  </button>
+                )}
                 <div className="mt-3 flex items-center gap-4 text-xs border-t border-app pt-3">
                   <span className="text-muted">{fmtTime(n.created_at)}</span>
                   <div className="ml-auto flex gap-4">
