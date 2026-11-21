@@ -4,8 +4,6 @@
 
 桌面单机应用，数据全部留在本地。
 
-**[⬇ 下载安装包（Windows）](https://github.com/xiaolu511/cardbox/releases/latest)** · 无需配置，装完双击就能用
-
 ![主界面](docs/screenshot-notes.png)
 
 ## 功能
