@@ -1,8 +1,8 @@
 {
   "name": "cardbox",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "author": "xiaolu511",
-  "description": "AI 卡片笔记",
+  "description": "AI 鍗＄墖绗旇",
   "main": "main.cjs",
   "scripts": {
     "start": "electron .",
