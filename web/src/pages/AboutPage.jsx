@@ -83,7 +83,7 @@ export default function AboutPage() {
         <div className="h-32 bg-primary-600/10 flex items-end justify-center relative overflow-hidden">
           {/* 用 mask 把线稿当遮罩涂成主题色：像素源自 PNG，不会有矢量描摹的断线 */}
           <div
-            className="absolute right-0 -bottom-2 h-[112%] aspect-[1400/874] bg-current text-muted opacity-50 pointer-events-none select-none"
+            className="absolute right-0 bottom-0 h-[112%] aspect-[1303/731] bg-current text-muted opacity-50 pointer-events-none select-none"
             style={{
               WebkitMaskImage: `url(${witchInk})`,
               maskImage: `url(${witchInk})`,
