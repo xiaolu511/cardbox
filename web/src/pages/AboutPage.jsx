@@ -2,47 +2,7 @@ import { useState } from 'react';
 import avatarUrl from '../assets/avatar.png';
 import witchInk from '../assets/witch-ink.webp';
 import { t, useI18n } from '../i18n';
-
-const CURRENT_VERSION = __APP_VERSION__;
-const RELEASE_REPO = 'xiaolu511/cardbox';
-
-// 按段比数字：1.0.10 > 1.0.9（字符串比较会判反），返回 1 / 0 / -1
-function compareVersions(a, b) {
-  const pa = String(a).split('.').map((n) => parseInt(n, 10) || 0);
-  const pb = String(b).split('.').map((n) => parseInt(n, 10) || 0);
-  const len = Math.max(pa.length, pb.length);
-  for (let i = 0; i < len; i++) {
-    const x = pa[i] || 0;
-    const y = pb[i] || 0;
-    if (x !== y) return x > y ? 1 : -1;
-  }
-  return 0;
-}
-
-// 先问本地服务端（它带 10 分钟缓存），失败再直连 GitHub。
-// 为什么要两条路：部分机器上 Node 的证书链验不过 GitHub（unable to verify the first certificate），
-// 而 Chromium 走 Windows 系统证书库是通的，所以兜底直连反而能成功。
-async function fetchLatestRelease(signal) {
-  try {
-    const res = await fetch('/api/version', { signal });
-    const data = await res.json().catch(() => ({}));
-    if (res.ok && data.latestVersion) return data;
-  } catch (e) {
-    if (e.name === 'AbortError') throw e;
-  }
-
-  const res = await fetch(`https://api.github.com/repos/${RELEASE_REPO}/releases/latest`, {
-    signal,
-    headers: { Accept: 'application/vnd.github+json' },
-  });
-  if (!res.ok) throw new Error(`GitHub 返回 ${res.status}`);
-  const rel = await res.json();
-  return {
-    latestVersion: String(rel.tag_name || '').replace(/^v/i, ''),
-    releaseNotes: rel.body || '',
-    downloadUrl: rel.html_url,
-  };
-}
+import { CURRENT_VERSION, compareVersions, fetchLatestRelease } from '../update';
 
 export default function AboutPage() {
   useI18n();

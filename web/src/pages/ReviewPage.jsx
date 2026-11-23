@@ -38,6 +38,9 @@ export default function ReviewPage({ active }) {
 
   const [idx, setIdx] = useState(0);
   const [flipped, setFlipped] = useState(false);
+  const [typed, setTyped] = useState('');            // 学员自己写的答案
+  const [judge, setJudge] = useState(null);          // { loading, verdict, comment }
+  const [answerErr, setAnswerErr] = useState('');
   const [detailGrade, setDetailGrade] = useState(null);
 
   // 本轮复习的临时战报（只活在内存里，刷新即清）
@@ -85,6 +88,9 @@ export default function ReviewPage({ active }) {
       setQueue(data);
       setIdx(0);
       setFlipped(false);
+    setTyped('');
+    setJudge(null);
+    setAnswerErr('');
       setSession({ done: 0, details: [] });
       setView('session');
     } catch (e) {
@@ -113,10 +119,51 @@ export default function ReviewPage({ active }) {
     setQueue(detail.items);
     setIdx(0);
     setFlipped(false);
+    setTyped('');
+    setJudge(null);
+    setAnswerErr('');
     setSession({ done: 0, details: [] });
     setDetail(null);
     setView('session');
   };
+
+
+  // 学员先自己写，提交后交给 AI 比对标准答案；太敷衍的会被打回，不让直接评分
+  const submitAnswer = async () => {
+    if (!card) return;
+    const text = typed.trim();
+    if (!text) { setAnswerErr(t('答案不能为空')); return; }
+    setAnswerErr('');
+    setJudge({ loading: true });
+    try {
+      const r = await api(`/api/cards/${card.id}/judge`, {
+        method: 'POST',
+        body: { answer: text, lang: getLang() },
+      });
+      const data = r?.data ?? r;
+      setJudge({ verdict: data.verdict, comment: data.comment || '' });
+      setFlipped(true); // 评判完直接露出标准答案，方便对照
+    } catch (e) {
+      setJudge(null);
+      setAnswerErr(e.message);
+    }
+  };
+
+  const verdictLabel = (v) => ({
+    correct: t('AI 判定：正确'),
+    partial: t('AI 判定：基本正确'),
+    wrong: t('AI 判定：不太对'),
+    too_simple: t('AI 判定：答案太简单'),
+  }[v] || '');
+
+  const verdictStyle = (v) => ({
+    correct: 'bg-green-500/10 border-green-500/30 text-green-600',
+    partial: 'bg-orange-500/10 border-orange-500/30 text-orange-600',
+    wrong: 'bg-red-500/10 border-red-500/30 text-red-600',
+    too_simple: 'bg-amber-500/10 border-amber-500/30 text-amber-600',
+  }[v] || 'bg-app border-app text-muted');
+
+  const tooSimple = judge?.verdict === 'too_simple';
 
   const grade = useCallback(async (g) => {
     if (!card) return;
@@ -131,6 +178,9 @@ export default function ReviewPage({ active }) {
         mastered: g === 'good' || g === 'easy' ? Math.min(s.mastered + 1, s.total) : s.mastered,
       }));
       setFlipped(false);
+    setTyped('');
+    setJudge(null);
+    setAnswerErr('');
       setIdx(i => i + 1);
       if (idx + 1 >= queue.length) setView('summary');
     } catch (e) { setErr(e.message); }
@@ -404,33 +454,79 @@ export default function ReviewPage({ active }) {
         </div>
       </div>
 
-      <div className="relative bg-card rounded-2xl shadow-lg border border-app p-10 min-h-[360px] flex flex-col justify-center cursor-pointer transition-all duration-300 hover:shadow-xl hover:border-primary-500/30" onClick={() => !flipped && setFlipped(true)}>
+      <div className="relative bg-card rounded-2xl shadow-lg border border-app p-8 min-h-[360px] flex flex-col transition-all duration-300">
         <div className="absolute top-4 left-4 flex items-center gap-1.5 text-xs text-muted">
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
           {t('知识卡片')}
         </div>
 
-        <div className="text-center space-y-6 mt-4">
-          <div>
+        <div className="space-y-5 mt-4">
+          <div className="text-center">
             <p className="text-xs font-medium text-primary-600 mb-3 tracking-[0.2em] uppercase">Question</p>
             <p className="text-xl md:text-2xl font-semibold text-main leading-relaxed">{card.question}</p>
           </div>
+
+          {!flipped && (
+            <div>
+              <p className="text-xs text-muted mb-2">{t('先自己写一遍，再对照答案')}</p>
+              <textarea
+                value={typed}
+                onChange={(e) => setTyped(e.target.value)}
+                rows={4}
+                placeholder={t('用你自己的话回答...')}
+                className="w-full bg-app border border-app rounded-xl p-3 text-sm text-main placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-y font-app"
+              />
+              <div className="mt-3 flex items-center gap-3 flex-wrap">
+                <button
+                  onClick={submitAnswer}
+                  disabled={judge?.loading || typed.trim().length === 0}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {judge?.loading ? t('AI 评判中...') : t('提交作答')}
+                </button>
+                <button onClick={() => { setJudge(null); setFlipped(true); }} className="text-xs text-muted hover:text-main transition-colors">
+                  {t('直接看答案')}
+                </button>
+                {answerErr && <span className="text-xs text-red-500">{answerErr}</span>}
+              </div>
+            </div>
+          )}
+
           {flipped && (
-            <div className="pt-6 border-t border-app animate-page">
-              <p className="text-xs font-medium text-primary-600 mb-3 tracking-[0.2em] uppercase">Answer</p>
-              <p className="text-base text-muted leading-relaxed whitespace-pre-wrap text-left">{card.answer}</p>
+            <div className="pt-4 border-t border-app animate-page space-y-4">
+              {judge?.verdict && (
+                <div className={`rounded-xl border p-3 ${verdictStyle(judge.verdict)}`}>
+                  <p className="text-sm font-medium">{verdictLabel(judge.verdict)}</p>
+                  {judge.comment && <p className="text-xs mt-1 opacity-80">{judge.comment}</p>}
+                </div>
+              )}
+              <div>
+                <p className="text-xs font-medium text-primary-600 mb-2 tracking-[0.2em] uppercase">Answer</p>
+                <p className="text-base text-muted leading-relaxed whitespace-pre-wrap">{card.answer}</p>
+              </div>
             </div>
           )}
         </div>
-
-        {!flipped && (
-          <p className="absolute bottom-4 left-0 right-0 text-center text-xs text-muted">
-            {t('点击卡片或按')} <kbd className="px-1.5 py-0.5 bg-app border border-app rounded text-[10px] font-mono">Space</kbd> {t('显示答案')}
-          </p>
-        )}
       </div>
 
-      {flipped && (
+      {flipped && tooSimple && (
+        <div className="space-y-3 animate-page">
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-center">
+            <p className="text-sm font-medium text-amber-600">{t('AI 判定：答案太简单')}</p>
+            <p className="text-xs text-muted mt-1">{t('用你自己的话把要点写出来，再提交一次。')}</p>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={() => { setFlipped(false); setJudge(null); }} className="flex-1 py-2.5 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors">
+              {t('再写一次')}
+            </button>
+            <button onClick={() => setJudge({ verdict: 'skipped' })} className="flex-1 py-2.5 bg-app border border-app text-main rounded-lg text-sm font-medium hover:bg-card transition-colors">
+              {t('直接评分')}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {flipped && !tooSimple && (
         <div className="space-y-3 animate-page">
           <div className="grid grid-cols-4 gap-3">
             {GRADE_CONFIG.map((g) => (

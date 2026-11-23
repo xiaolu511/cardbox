@@ -168,6 +168,21 @@ const TW = {
   '取消': '取消',
   '问题不能为空': '問題不能為空',
   '答案不能为空': '答案不能為空',
+  '先自己写一遍，再对照答案': '先自己寫一遍，再對照答案',
+  '用你自己的话回答...': '用你自己的話回答...',
+  '提交作答': '提交作答',
+  'AI 评判中...': 'AI 評判中...',
+  '直接看答案': '直接看答案',
+  'AI 判定：正确': 'AI 判定：正確',
+  'AI 判定：基本正确': 'AI 判定：基本正確',
+  'AI 判定：不太对': 'AI 判定：不太對',
+  'AI 判定：答案太简单': 'AI 判定：答案太簡單',
+  '再写一次': '再寫一次',
+  '直接评分': '直接評分',
+  '有新版本 v{v}': '有新版本 v{v}',
+  '保存前先精简': '儲存前先精簡',
+  '正在精简...': '正在精簡...',
+  '用你自己的话把要点写出来，再提交一次。': '用你自己的話把要點寫出來，再提交一次。',
 };
 
 const EN = {
@@ -324,6 +339,21 @@ const EN = {
   '取消': 'Cancel',
   '问题不能为空': 'Question cannot be empty',
   '答案不能为空': 'Answer cannot be empty',
+  '先自己写一遍，再对照答案': 'Write your own answer first, then compare',
+  '用你自己的话回答...': 'Answer in your own words...',
+  '提交作答': 'Submit answer',
+  'AI 评判中...': 'Grading...',
+  '直接看答案': 'Show answer',
+  'AI 判定：正确': 'AI: correct',
+  'AI 判定：基本正确': 'AI: mostly right',
+  'AI 判定：不太对': 'AI: not quite',
+  'AI 判定：答案太简单': 'AI: too thin to grade',
+  '再写一次': 'Try again',
+  '直接评分': 'Grade anyway',
+  '有新版本 v{v}': 'Update available v{v}',
+  '保存前先精简': 'Condense before saving',
+  '正在精简...': 'Condensing...',
+  '用你自己的话把要点写出来，再提交一次。': 'Write the key points in your own words and submit again.',
 };
 
 const DICTS = { zhCN: null, zhTW: TW, en: EN };

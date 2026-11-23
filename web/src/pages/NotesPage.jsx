@@ -31,7 +31,8 @@ export default function NotesPage({ active = true }) {
   // 拆卡前先问张数；null = 没在选择。ids 可能是一条，也可能是批量选中的多条。
   const [splitTarget, setSplitTarget] = useState(null);
   const [splitCount, setSplitCount] = useState(3);
-  const [useOutline, setUseOutline] = useState(false);
+  const [useRefine, setUseRefine] = useState(false); // 保存前先让 AI 精简一遍
+  const [refining, setRefining] = useState(false);
   const [importMsg, setImportMsg] = useState('');
   const fileRef = useRef(null);
   // 批量模式
@@ -87,7 +88,18 @@ export default function NotesPage({ active = true }) {
     if (!text.trim()) return;
     setErr('');
     try {
-      await api('/api/notes', { method: 'POST', body: { raw_text: text } });
+      let raw = text;
+      if (useRefine) {
+        setRefining(true);
+        try {
+          const r = await api('/api/refine', { method: 'POST', body: { text, lang: getLang() } });
+          const refined = (r?.data ?? r)?.text;
+          if (refined && refined.trim()) raw = refined.trim();
+        } finally {
+          setRefining(false);
+        }
+      }
+      await api('/api/notes', { method: 'POST', body: { raw_text: raw } });
       setText('');
       await load(true); // 保存后重置分页
     } catch (e) { setErr(e.message); }
@@ -118,7 +130,7 @@ export default function NotesPage({ active = true }) {
     try {
       for (const id of list) {
         try {
-          const r = await api(`/api/notes/${id}/cards`, { method: 'POST', body: { lang: getLang(), count, outline: useOutline } });
+          const r = await api(`/api/notes/${id}/cards`, { method: 'POST', body: { lang: getLang(), count } });
           ok += r.created || 0;
         } catch (e) { setErr(e.message); }
       }
@@ -175,7 +187,16 @@ export default function NotesPage({ active = true }) {
         className="w-full h-32 p-3 border border-app bg-transparent text-main rounded-lg font-app text-app leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary-500 placeholder-gray-400"
       />
       <div className="flex items-center gap-3 flex-wrap">
-        <button onClick={add} className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors">{t('保存笔记')}</button>
+        <button onClick={add} disabled={refining} className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+          {refining ? t('正在精简...') : t('保存笔记')}
+        </button>
+        <label className="flex items-center gap-2 text-xs text-muted cursor-pointer select-none">
+          <input
+            type="checkbox" checked={useRefine} onChange={(e) => setUseRefine(e.target.checked)}
+            className="w-3.5 h-3.5 accent-[var(--custom-primary)]"
+          />
+          {t('保存前先精简')}
+        </label>
         <input
           type="file" ref={fileRef} onChange={onPickFile} className="hidden"
           accept=".txt,.md,.markdown,.docx,.pdf"
@@ -294,14 +315,6 @@ export default function NotesPage({ active = true }) {
                 />
               </div>
               <p className="text-xs text-muted">{t('AI 会尽量按这个数量拆，实际以内容为准。')}</p>
-              <label className="flex items-center gap-2 text-sm text-main cursor-pointer">
-                <input
-                  type="checkbox" checked={useOutline}
-                  onChange={(e) => setUseOutline(e.target.checked)}
-                  className="w-4 h-4 accent-[var(--custom-primary)]"
-                />
-                {t('先提炼要点再拆卡（更聚焦，慢一点）')}
-              </label>
             </div>
             <div className="px-5 py-4 border-t border-app flex justify-end gap-3">
               <button onClick={() => setSplitTarget(null)} className="px-4 py-2 rounded-lg text-muted hover-item transition-colors">{t('取消')}</button>

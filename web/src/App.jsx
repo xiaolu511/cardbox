@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getToken, setToken, setUnauthorizedHandler } from './api';
 import { applyTheme, readTheme, ensureCustomFont } from './theme';
 import { t, useI18n } from './i18n';
+import { checkForUpdateSilently } from './update';
 import LoginPage from './pages/LoginPage';
 import NotesPage from './pages/NotesPage';
 import CardsPage from './pages/CardsPage';
@@ -13,12 +14,22 @@ export default function App() {
   useI18n(); // 订阅语言变化，切换后整棵树重渲染
   const [token, _setToken] = useState(getToken());
   const [tab, setTab] = useState('notes');
+  const [updateReady, setUpdateReady] = useState(null); // { latestVersion } | null
 
   useEffect(() => {
     // 主题与自定义字体都只在启动时初始化一次；设置页改完会直接调 applyTheme 即时生效。
     // 变量清单只维护在 theme.js 一份，别在这儿再抄一遍。
     ensureCustomFont();
     applyTheme(readTheme());
+  }, []);
+
+  useEffect(() => {
+    // 启动时静默查一次新版本：失败、超时都当没查到，绝不打扰用户
+    let alive = true;
+    const timer = setTimeout(() => {
+      checkForUpdateSilently().then((v) => { if (alive && v) setUpdateReady(v); });
+    }, 4000); // 等启动动画和首屏请求先跑完，别抢带宽
+    return () => { alive = false; clearTimeout(timer); };
   }, []);
 
   useEffect(() => {
@@ -70,6 +81,9 @@ export default function App() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon} />
                 </svg>
                 {item.label}
+                {item.id === 'about' && updateReady && (
+                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-red-500" title={t('有新版本 v{v}', { v: updateReady.latestVersion })} />
+                )}
               </button>
             ))}
           </nav>

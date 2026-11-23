@@ -5,7 +5,7 @@ import rateLimit from '@fastify/rate-limit';
 import { z } from 'zod';
 import { db } from './db.js';
 import { hashPassword, verifyPassword } from './auth.js';
-import { splitToCards, answerQuestion, extractOutline } from './llm.js';
+import { splitToCards, answerQuestion, extractOutline, judgeAnswer, refineText } from './llm.js';
 import { extractText } from './extract.js';
 import multipart from '@fastify/multipart';
 import fastifyStatic from '@fastify/static';
@@ -215,6 +215,49 @@ app.post('/api/cards/:id/regen', { preHandler: auth }, async (req, reply) => {
     return { data: { ...card, question: nextQuestion, answer } };
   } catch (e) {
     return reply.code(502).send({ error: `AI 重答失败: ${e.message}` });
+  }
+});
+
+// 学员先自己作答，再由 AI 比对标准答案评判；太敷衍的答案不让过
+app.post('/api/cards/:id/judge', { preHandler: auth }, async (req, reply) => {
+  const { answer, lang } = req.body ?? {};
+  const typed = typeof answer === 'string' ? answer.trim() : '';
+  if (!typed) return reply.code(400).send({ error: '答案不能为空' });
+  if (typed.length > 2000) return reply.code(400).send({ error: '答案不超过 2000 字' });
+
+  const card = db.prepare(
+    'SELECT c.*, n.raw_text as note_text FROM cards c JOIN notes n ON n.id = c.note_id WHERE c.id = ? AND n.user_id = ?'
+  ).get(req.params.id, req.user.uid);
+  if (!card) return reply.code(404).send({ error: '卡片不存在' });
+
+  // 一眼就能看出在敷衍的，不必麻烦模型
+  const lazy = /^(不知道|不会|不清楚|是|对|恩|嗯|无|没有|忘了|不记得|idk|no idea|dunno|yes|no|ok)[.!。！？]*$/i;
+  if (typed.length < 4 || lazy.test(typed)) {
+    return { data: { verdict: 'too_simple', comment: '答案太简单了，把你知道的写具体一点。' } };
+  }
+
+  try {
+    const user = db.prepare('SELECT api_key FROM users WHERE id = ?').get(req.user.uid);
+    const result = await judgeAnswer(card.question, card.answer, typed, user?.api_key, lang);
+    return { data: result };
+  } catch (e) {
+    return reply.code(502).send({ error: `AI 评判失败: ${e.message}` });
+  }
+});
+
+// 保存笔记前先精简提炼
+app.post('/api/refine', { preHandler: auth }, async (req, reply) => {
+  const { text, lang } = req.body ?? {};
+  const raw = typeof text === 'string' ? text.trim() : '';
+  if (raw.length < 10) return reply.code(400).send({ error: '内容太短，不需要精简' });
+  if (raw.length > 20000) return reply.code(400).send({ error: '内容太长了，请分段处理' });
+
+  try {
+    const user = db.prepare('SELECT api_key FROM users WHERE id = ?').get(req.user.uid);
+    const refined = await refineText(raw, user?.api_key, { lang });
+    return { data: { text: refined } };
+  } catch (e) {
+    return reply.code(502).send({ error: `精简失败: ${e.message}` });
   }
 });
 
