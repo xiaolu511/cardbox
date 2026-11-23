@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { api } from '../api';
 import { applyTheme, readTheme, saveTheme, getContrastColor, importCustomFont, resetTheme } from '../theme';
 import { t, useI18n, setLang, getLang, LANGS } from '../i18n';
+import { STRICTNESS_OPTIONS, getStrictness, setStrictness } from '../judgePrefs';
 
 const PRESETS = [
   { name: '经典亮色', primary: '#2563eb', bg: '#f8fafc', sidebar: '#ffffff', card: '#ffffff' },
@@ -22,6 +23,7 @@ export default function SettingsPage({ active = true }) {
   const { primary, bg, sidebar, card, fontSize } = theme;
 
   const [fontName, setFontName] = useState(theme.fontFamily);
+  const [strictness, setStrictnessState] = useState(getStrictness());
   const [fontMsg, setFontMsg] = useState('');
   const [themeMsg, setThemeMsg] = useState('');
   const fileInputRef = useRef(null);
@@ -118,6 +120,27 @@ export default function SettingsPage({ active = true }) {
           <p className="text-xs text-muted">{t('切换后立即生效，保存在本机')}</p>
         </div>
       </div>
+      {/* AI 判定严格度 */}
+      <div className="bg-card rounded-xl shadow-sm border border-app overflow-hidden">
+        <div className="px-6 py-4 border-b border-app bg-black/5">
+          <h3 className="font-bold text-primary-600">{t('AI 判定严格度')}</h3>
+        </div>
+        <div className="px-6 py-5 space-y-3">
+          <div className="flex gap-2">
+            {STRICTNESS_OPTIONS.map((o) => (
+              <button
+                key={o.id}
+                onClick={() => { setStrictness(o.id); setStrictnessState(o.id); }}
+                className={`px-4 py-1.5 rounded-lg border text-sm transition-colors ${strictness === o.id ? 'border-primary-500 bg-primary-600/10 text-primary-600' : 'border-app text-muted hover:bg-black/5'}`}
+              >
+                {t(o.label)}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-muted">{t('越严格，答案缺关键点就越容易被判成「忘了」。')}</p>
+        </div>
+      </div>
+
       {/* 主题外观 */}
       <div className="bg-card rounded-xl shadow-sm border border-app overflow-hidden">
         <div className="px-6 py-4 border-b border-app bg-black/5">

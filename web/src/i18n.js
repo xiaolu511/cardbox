@@ -15,6 +15,12 @@ export const LANGS = [
 ];
 
 const TW = {
+  "得分": "得分",
+  "越严格，答案缺关键点就越容易被判成「忘了」。": "越嚴格，答案缺關鍵點就越容易被判成「忘了」。",
+  "宽松": "寬鬆",
+  "适中": "適中",
+  "严格": "嚴格",
+  "AI 判定严格度": "AI 判定嚴格度",
   "你的作答": "你的作答",
   "支持 txt / md / docx / pdf，单个不超过 10MB": "支援 txt / md / docx / pdf，單檔不超過 10MB",
   "松手即导入到笔记": "放開即匯入到筆記",
@@ -196,6 +202,12 @@ const TW = {
 };
 
 const EN = {
+  "得分": "Score",
+  "越严格，答案缺关键点就越容易被判成「忘了」。": "Stricter grading marks missing key points as \"forgot\" more often.",
+  "宽松": "Lenient",
+  "适中": "Normal",
+  "严格": "Strict",
+  "AI 判定严格度": "Grading strictness",
   "你的作答": "Your answer",
   '笔记': 'Notes',
   '卡片': 'Cards',

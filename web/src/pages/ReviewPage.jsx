@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '../api';
+import { getStrictness } from '../judgePrefs';
 import { t, useI18n, getLang } from './../i18n';
 
 const GRADE_CONFIG = [
@@ -139,14 +140,14 @@ export default function ReviewPage({ active }) {
     try {
       const r = await api(`/api/cards/${card.id}/judge`, {
         method: 'POST',
-        body: { answer: text, lang: getLang() },
+        body: { answer: text, lang: getLang(), strictness: getStrictness() },
       });
       const data = r?.data ?? r;
       const v = data.verdict;
-      setJudge({ verdict: v, comment: data.comment || '' });
+      setJudge({ verdict: v, comment: data.comment || '', score: data.score });
       setFlipped(true);
       // 评分只由 AI 决定：对了 3 天后，其余（含太简单）明天再来
-      const g = v === 'correct' ? 'good' : 'hard';
+      const g = v === 'correct' ? 'good' : v === 'partial' ? 'hard' : 'again';
       await api(`/api/cards/${card.id}/review`, { method: 'POST', body: { grade: g } });
       setSession((s2) => ({ done: s2.done + 1, details: [...s2.details, { ...card, grade: g }] }));
       setServerStats((s2) => ({
@@ -509,6 +510,7 @@ export default function ReviewPage({ active }) {
               {judge?.verdict && (
                 <div className={`rounded-xl border p-3 ${verdictStyle(judge.verdict)}`}>
                   <p className="text-sm font-medium">{verdictLabel(judge.verdict)}</p>
+                  {typeof judge.score === 'number' && <span className="ml-2 text-xs opacity-70">{t('得分')} {judge.score}</span>}
                   {judge.comment && <p className="text-xs mt-1 opacity-80">{judge.comment}</p>}
                 </div>
               )}

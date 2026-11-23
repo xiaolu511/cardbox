@@ -230,6 +230,13 @@ Rules:
 4. Output JSON only: {"verdict":"correct|partial|wrong|too_simple","comment":"..."}. No markdown.`,
 };
 
+// 三档严格度：越高越容易判成没记住
+const JUDGE_THRESHOLDS = {
+  strict: { correct: 0.80, partial: 0.60 },
+  normal: { correct: 0.70, partial: 0.45 },
+  loose: { correct: 0.55, partial: 0.30 },
+};
+
 const JUDGE_LABELS = {
   zhCN: { q: '问题', s: '标准答案', a: '学员作答' },
   zhTW: { q: '問題', s: '標準答案', a: '學員作答' },
@@ -247,7 +254,7 @@ function overlapRatio(userAnswer, standard) {
   return hit / Math.max(new Set(u.split('')).size, 1);
 }
 
-export async function judgeAnswer(question, standard, userAnswer, apiKey, lang = 'zhCN') {
+export async function judgeAnswer(question, standard, userAnswer, apiKey, lang = 'zhCN', strictness = 'normal') {
   const finalKey = apiKey || process.env.DEEPSEEK_API_KEY;
   const answer = String(userAnswer || '').trim();
 
@@ -257,9 +264,11 @@ export async function judgeAnswer(question, standard, userAnswer, apiKey, lang =
       return { verdict: 'too_simple', comment: '（示例评判）答案太短，写具体一点。' };
     }
     const r = overlapRatio(answer, standard);
-    if (r > 0.5) return { verdict: 'correct', comment: '（示例评判）要点基本都对上了。' };
-    if (r > 0.22) return { verdict: 'partial', comment: '（示例评判）抓到一部分，但不完整。' };
-    return { verdict: 'wrong', comment: '（示例评判）和标准答案对不上。' };
+    const score = Math.round(r * 100);
+    const th = JUDGE_THRESHOLDS[strictness] || JUDGE_THRESHOLDS.normal;
+    if (r >= th.correct) return { score, verdict: 'correct', comment: '（示例评判）要点基本都对上了。' };
+    if (r >= th.partial) return { score, verdict: 'partial', comment: '（示例评判）抓到一部分，但不完整。' };
+    return { score, verdict: 'wrong', comment: '（示例评判）和标准答案对不上。' };
   }
 
   const L = JUDGE_LABELS[lang] || JUDGE_LABELS.zhCN;
@@ -274,7 +283,7 @@ export async function judgeAnswer(question, standard, userAnswer, apiKey, lang =
 
 ${L.s}：${standard}
 
-${L.a}：${answer}` },
+${L.a}：${answer}\n\n评分严格度：${strictness === 'strict' ? '严格' : strictness === 'loose' ? '宽松' : '适中'}（严格时缺关键点就判 partial/wrong，宽松时方向对即可）。` },
       ],
       temperature: 0.2,
       response_format: { type: 'json_object' },
@@ -287,7 +296,10 @@ ${L.a}：${answer}` },
   const text = data.choices?.[0]?.message?.content ?? '';
   const parsed = JSON.parse(extractJson(text));
   const verdict = ['correct', 'partial', 'wrong', 'too_simple'].includes(parsed.verdict) ? parsed.verdict : 'partial';
-  return { verdict, comment: String(parsed.comment || '').slice(0, 120) };
+  const rawScore = Number(parsed.score);
+  const score = Number.isFinite(rawScore) ? Math.max(0, Math.min(100, Math.round(rawScore)))
+    : verdict === 'correct' ? 90 : verdict === 'partial' ? 60 : verdict === 'too_simple' ? 5 : 25;
+  return { score, verdict, comment: String(parsed.comment || '').slice(0, 120) };
 }
 
 // ========== 保存笔记前先精简 ==========

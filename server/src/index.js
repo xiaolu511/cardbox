@@ -222,6 +222,7 @@ app.post('/api/cards/:id/regen', { preHandler: auth }, async (req, reply) => {
 app.post('/api/cards/:id/judge', { preHandler: auth }, async (req, reply) => {
   const { answer, lang } = req.body ?? {};
   const typed = typeof answer === 'string' ? answer.trim() : '';
+  const strictness = ['strict', 'normal', 'loose'].includes(req.body?.strictness) ? req.body.strictness : 'normal';
   if (!typed) return reply.code(400).send({ error: '答案不能为空' });
   if (typed.length > 2000) return reply.code(400).send({ error: '答案不超过 2000 字' });
 
@@ -238,7 +239,7 @@ app.post('/api/cards/:id/judge', { preHandler: auth }, async (req, reply) => {
 
   try {
     const user = db.prepare('SELECT api_key FROM users WHERE id = ?').get(req.user.uid);
-    const result = await judgeAnswer(card.question, card.answer, typed, user?.api_key, lang);
+    const result = await judgeAnswer(card.question, card.answer, typed, user?.api_key, lang, strictness);
     return { data: result };
   } catch (e) {
     return reply.code(502).send({ error: `AI 评判失败: ${e.message}` });
