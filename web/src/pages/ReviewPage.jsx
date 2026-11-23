@@ -543,8 +543,8 @@ export default function ReviewPage({ active }) {
               onClick={async () => {
                 if (!card || autoGraded) return;
                 setFlipped(true);
-                await api(`/api/cards/${card.id}/review`, { method: 'POST', body: { grade: 'hard' } });
-                setSession((s2) => ({ done: s2.done + 1, details: [...s2.details, { ...card, grade: 'hard' }] }));
+                await api(`/api/cards/${card.id}/review`, { method: 'POST', body: { grade: 'again' } });
+                setSession((s2) => ({ done: s2.done + 1, details: [...s2.details, { ...card, grade: 'again' }] }));
                 setServerStats((s2) => ({
                   ...s2,
                   due: Math.max(s2.due - 1, 0),
@@ -559,7 +559,7 @@ export default function ReviewPage({ active }) {
           ) : (
             <div className="flex items-center gap-3 bg-card border border-app rounded-xl shadow-lg px-4 py-3">
               <div className="text-xs text-muted max-w-[220px]">
-                {judge?.verdict ? verdictLabel(judge.verdict) : t('已跳过作答，本题记为模糊')}
+                {judge?.verdict ? verdictLabel(judge.verdict) : t('已跳过作答，本题记为忘了')}
               </div>
               <button
                 onClick={() => {
