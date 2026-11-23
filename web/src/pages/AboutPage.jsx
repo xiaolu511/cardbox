@@ -200,21 +200,38 @@ export default function AboutPage() {
               <svg className="w-4 h-4 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
               {t('开发者')}
             </h3>
-            <div className="flex items-center gap-4 p-4 bg-app border border-app rounded-xl">
-              {/* 🌟 这里使用了本地化导入的头像 */}
-              <img 
-                src={avatarUrl} 
-                alt="xiaolu511" 
-                className="w-12 h-12 rounded-full border border-app shadow-sm object-cover bg-white"
-              />
-              <div>
-                <p className="font-bold text-main text-sm">xiaolu511</p>
-                <p className="text-xs text-muted mt-0.5">{t('全栈独立开发者')}</p>
-                <p className="text-xs text-muted mt-0.5">{t('联系邮箱: {e}', { e: '2902338992@qq.com' })}</p>
+            
+            {/* 🌟 改为响应式两端对齐布局 */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-app border border-app rounded-xl">
+              
+              {/* 左侧：头像和基本信息 */}
+              <div className="flex items-center gap-4">
+                <img 
+                  src={avatarUrl} 
+                  alt="xiaolu511" 
+                  className="w-12 h-12 rounded-full border border-app shadow-sm object-cover bg-white"
+                />
+                <div>
+                  <p className="font-bold text-main text-sm">xiaolu511</p>
+                  <p className="text-xs text-muted mt-0.5">{t('全栈独立开发者')}</p>
+                  <p className="text-xs text-muted mt-0.5">{t('联系邮箱: {e}', { e: '2902338992@qq.com' })}</p>
+                </div>
               </div>
+
+              {/* 🌟 右侧：链接群（使用 i18n 和主题色） */}
+              <div className="flex items-center gap-5 text-sm font-medium sm:ml-auto">
+                <a 
+                  href="https://github.com/xiaolu511" 
+                  target="_blank" 
+                  rel="noreferrer"
+                  className="text-primary-600 hover:underline transition-colors"
+                >
+                  GitHub
+                </a>
+              </div>
+
             </div>
           </div>
-
           {/* 底部版权 */}
           <div className="pt-4 text-center">
             <p className="text-xs text-muted">
@@ -229,4 +246,4 @@ export default function AboutPage() {
       </div>
     </div>
   );
-}
+}

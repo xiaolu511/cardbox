@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Cardbox 白色版图标：白底 + 紫卡 + 白 C -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="violet" x1="0" y1="0" x2="0.55" y2="1">
+      <stop offset="0%" stop-color="#7a5cf0"/>
+      <stop offset="55%" stop-color="#5d47d8"/>
+      <stop offset="100%" stop-color="#6f50ea"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0.6" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.32"/>
+      <stop offset="45%" stop-color="#ffffff" stop-opacity="0.04"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shSoft" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="20" stdDeviation="20" flood-color="#4a3bb0" flood-opacity="0.22"/>
+    </filter>
+    <clipPath id="card"><rect x="112" y="176" width="288" height="200" rx="32"/></clipPath>
+  </defs>
+
+  <rect width="512" height="512" rx="116" fill="#ffffff"/>
+  <!-- 白底在白桌面上会隐身，靠这圈极淡的描边留住轮廓 -->
+  <rect x="1" y="1" width="510" height="510" rx="115" fill="none" stroke="#e3dff2" stroke-width="2"/>
+
+  <g transform="translate(256 272) scale(1.08) translate(-256 -272)">
+    <!-- 叠在后面两张 -->
+    <g opacity="0.26" transform="rotate(16 256 282)">
+      <rect x="124" y="192" width="280" height="184" rx="30" fill="#a99bf0"/>
+    </g>
+    <g opacity="0.42" transform="rotate(8 256 278)">
+      <rect x="118" y="184" width="284" height="192" rx="30" fill="#8b76ea"/>
+    </g>
+
+    <!-- 主卡 -->
+    <g transform="rotate(-8 256 272)">
+      <g filter="url(#shSoft)">
+        <rect x="112" y="176" width="288" height="200" rx="32" fill="url(#violet)"/>
+      </g>
+      <g clip-path="url(#card)">
+        <path d="M 112 176 L 400 176 L 400 214 L 112 286 Z" fill="url(#sheen)"/>
+      </g>
+      <circle cx="256" cy="276" r="46" fill="none" stroke="#ffffff" stroke-width="17"
+              stroke-linecap="butt" stroke-dasharray="214 75" stroke-dashoffset="-37"/>
+    </g>
+  </g>
+</svg>
