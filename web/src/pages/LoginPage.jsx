@@ -5,7 +5,7 @@ import { t, useI18n } from '../i18n';
 export default function LoginPage({ onLogin }) {
   useI18n();
   const [mode, setMode] = useState('login'); // 'login' | 'register'
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [err, setErr] = useState('');
   
@@ -38,9 +38,9 @@ export default function LoginPage({ onLogin }) {
     try {
       const { token } = await api(`/api/auth/${mode}`, {
         method: 'POST',
-        body: { email, password },
+        body: { username, password },
       });
-      saveToHistory(email, password);
+      saveToHistory(username, password);
       onLogin(token);
     } catch (e) {
       setErr(e.message);
@@ -49,8 +49,8 @@ export default function LoginPage({ onLogin }) {
 
   const saveToHistory = (mail, pwd) => {
     try {
-      let newHistory = history.filter(item => item.email !== mail);
-      newHistory.unshift({ email: mail, password: pwd });
+      let newHistory = history.filter(item => item.username !== mail);
+      newHistory.unshift({ username: mail, password: pwd });
       newHistory = newHistory.slice(0, 5);
       setHistory(newHistory);
       localStorage.setItem('cardbox_login_history', JSON.stringify(newHistory));
@@ -60,7 +60,7 @@ export default function LoginPage({ onLogin }) {
   };
 
   const selectHistory = (item) => {
-    setEmail(item.email);
+    setUsername(item.username);
     setPassword(item.password);
     setShowHistory(false);
     setMode('login');
@@ -75,11 +75,11 @@ export default function LoginPage({ onLogin }) {
         
         <div className="relative" ref={dropdownRef}>
           <input 
-            type="email" 
+            type="text" 
             required 
-            placeholder={t('邮箱')} 
-            value={email} 
-            onChange={(e) => setEmail(e.target.value)} 
+            placeholder={t('用户名')} 
+            value={username} 
+            onChange={(e) => setUsername(e.target.value)} 
             onFocus={() => { if (history.length > 0) setShowHistory(true); }}
             className="w-full border border-app bg-transparent text-main p-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm placeholder-gray-400" 
           />
@@ -93,7 +93,7 @@ export default function LoginPage({ onLogin }) {
                   onClick={() => selectHistory(item)}
                   className="px-4 py-3 hover-item cursor-pointer flex justify-between items-center text-sm border-b border-app last:border-b-0"
                 >
-                  <span className="text-main">{item.email}</span>
+                  <span className="text-main">{item.username}</span>
                   <span className="text-muted text-xs">••••••</span>
                 </div>
               ))}
@@ -119,7 +119,7 @@ export default function LoginPage({ onLogin }) {
       </form>
       
       <div className="flex justify-between items-center pt-2">
-        <button 
+        <button type="button" 
           onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setShowHistory(false); }} 
           className="text-sm text-primary-600 hover:underline font-medium"
         >
@@ -127,7 +127,7 @@ export default function LoginPage({ onLogin }) {
         </button>
 
         {mode === 'login' && history.length > 0 && (
-          <button 
+          <button type="button" 
             onClick={() => {
               localStorage.removeItem('cardbox_login_history');
               setHistory([]);

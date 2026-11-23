@@ -33,24 +33,36 @@ app.setErrorHandler((err, req, reply) => {
 });
 
 // ========== 认证 ==========
-const credSchema = z.object({ email: z.string().email(), password: z.string().min(6) });
+const credSchema = z.object({
+  username: z.string().trim().min(2).max(32).optional(),
+  email: z.string().trim().optional(),
+  password: z.string().min(6),
+});
+const nameOf = (b) => (b.username || b.email || '').trim();
 
 app.post('/api/auth/register', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (req, reply) => {
-  const { email, password } = credSchema.parse(req.body);
+  const parsed = credSchema.parse(req.body);
+  const username = nameOf(parsed);
+  if (!username) return reply.code(400).send({ error: '请填写用户名' });
   try {
-    const info = db.prepare('INSERT INTO users (email, password_hash) VALUES (?, ?)').run(email, await hashPassword(password));
+    const info = db
+      .prepare('INSERT INTO users (email, username, password_hash) VALUES (?, ?, ?)')
+      .run(`${username}@cardbox.local`, username, await hashPassword(parsed.password));
     return { token: app.jwt.sign({ uid: info.lastInsertRowid }) };
   } catch (e) {
-    if (/UNIQUE/.test(e.message)) return reply.code(409).send({ error: '邮箱已注册' });
+    if (/UNIQUE/.test(e.message)) return reply.code(409).send({ error: '这个用户名已经被注册了' });
     throw e;
   }
 });
 
 app.post('/api/auth/login', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (req, reply) => {
-  const { email, password } = credSchema.parse(req.body);
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
-  if (!user || !(await verifyPassword(password, user.password_hash))) {
-    return reply.code(401).send({ error: '邮箱或密码错误' });
+  const parsed = credSchema.parse(req.body);
+  const who = nameOf(parsed);
+  const user = db
+    .prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE OR email = ? COLLATE NOCASE')
+    .get(who, who);
+  if (!user || !(await verifyPassword(parsed.password, user.password_hash))) {
+    return reply.code(401).send({ error: '用户名或密码错误' });
   }
   return { token: app.jwt.sign({ uid: user.id }) };
 });

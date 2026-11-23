@@ -3,6 +3,8 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // 1. 修复路径问题：优先用环境变量传的（Electron用），否则定死在 server/data 下
 const dbDir = process.env.DB_DIR || path.join(__dirname, '../data');
@@ -16,6 +18,7 @@ db.exec(`
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   email TEXT NOT NULL UNIQUE,
+  username TEXT,
   password_hash TEXT NOT NULL,
   api_key TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -49,6 +52,50 @@ CREATE TABLE IF NOT EXISTS review_log (
 CREATE INDEX IF NOT EXISTS idx_review_log_card ON review_log(card_id, graded_at);
 CREATE INDEX IF NOT EXISTS idx_review_log_time ON review_log(graded_at);
 `);
+
+// 老库迁移：补 username 列（注册/登录已改用用户名）
+const addUsernameColumn = () => {
+
+  const cols = db.prepare('PRAGMA table_info(users)').all().map((c) => c.name);
+
+  if (cols.includes('username')) {
+
+    db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username COLLATE NOCASE)");
+
+    return;
+
+  }
+
+  db.exec('ALTER TABLE users ADD COLUMN username TEXT');
+
+  const rows = db.prepare('SELECT id, email FROM users WHERE username IS NULL OR username = \'\'').all();
+
+  const upd = db.prepare('UPDATE users SET username = ? WHERE id = ?');
+
+  const taken = new Set();
+
+  for (const r of rows) {
+
+    const base = String(r.email || 'user').split('@')[0].replace(/[^A-Za-z0-9_\-\u4e00-\u9fa5.]/g, '') || 'user';
+
+    let name = base;
+
+    let n = 1;
+
+    while (taken.has(name.toLowerCase())) name = base + n++;
+
+    taken.add(name.toLowerCase());
+
+    upd.run(name, r.id);
+
+  }
+
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username ON users(username COLLATE NOCASE)");
+
+};
+
+addUsernameColumn();
+
 
 // 2. 修复重复拆卡：给 (note_id, question) 加唯一索引
 try {
