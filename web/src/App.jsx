@@ -3,6 +3,8 @@ import { getToken, setToken, setUnauthorizedHandler } from './api';
 import { applyTheme, readTheme, ensureCustomFont } from './theme';
 import { t, useI18n } from './i18n';
 import { checkForUpdateSilently } from './update';
+import { emitDropFile } from './dropbus';
+import { upload } from './api';
 import LoginPage from './pages/LoginPage';
 import NotesPage from './pages/NotesPage';
 import CardsPage from './pages/CardsPage';
@@ -15,6 +17,9 @@ export default function App() {
   const [token, _setToken] = useState(getToken());
   const [tab, setTab] = useState('notes');
   const [updateReady, setUpdateReady] = useState(null); // { latestVersion } | null
+  const [dragging, setDragging] = useState(false);
+  const [dropErr, setDropErr] = useState('');
+  const [dropBusy, setDropBusy] = useState(false);
 
   useEffect(() => {
     // 主题与自定义字体都只在启动时初始化一次；设置页改完会直接调 applyTheme 即时生效。
@@ -40,6 +45,63 @@ export default function App() {
     });
   }, []);
 
+
+  useEffect(() => {
+    if (!token) return;
+    let depth = 0;
+    const isFile = (e) => Array.from(e.dataTransfer?.types || []).includes('Files');
+
+    const onEnter = (e) => {
+      if (!isFile(e)) return;
+      depth += 1;
+      setDragging(true);
+    };
+    const onOver = (e) => {
+      if (!isFile(e)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    };
+    const onLeave = () => {
+      depth = Math.max(depth - 1, 0);
+      if (depth === 0) setDragging(false);
+    };
+    const onDrop = async (e) => {
+      if (!isFile(e)) return;
+      e.preventDefault();
+      depth = 0;
+      setDragging(false);
+      const file = e.dataTransfer.files?.[0];
+      if (!file) return;
+
+      const ok = /\.(txt|md|markdown|docx|pdf)$/i.test(file.name);
+      if (!ok) { setDropErr(t('只支持 txt / md / docx / pdf')); setTimeout(() => setDropErr(''), 4000); return; }
+      if (file.size > 10 * 1024 * 1024) { setDropErr(t('文件不能超过 10MB')); setTimeout(() => setDropErr(''), 4000); return; }
+
+      setDropBusy(true);
+      try {
+        const r = await upload('/api/extract', file);
+        const data = r?.data ?? r;
+        setTab('notes');
+        emitDropFile({ name: data.filename || file.name, text: data.text || '' });
+      } catch (err) {
+        setDropErr(err.message);
+        setTimeout(() => setDropErr(''), 5000);
+      } finally {
+        setDropBusy(false);
+      }
+    };
+
+    window.addEventListener('dragenter', onEnter);
+    window.addEventListener('dragover', onOver);
+    window.addEventListener('dragleave', onLeave);
+    window.addEventListener('drop', onDrop);
+    return () => {
+      window.removeEventListener('dragenter', onEnter);
+      window.removeEventListener('dragover', onOver);
+      window.removeEventListener('dragleave', onLeave);
+      window.removeEventListener('drop', onDrop);
+    };
+  }, [token]);
 
   const navItems = [
     { id: 'notes', label: t('笔记'), icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' },

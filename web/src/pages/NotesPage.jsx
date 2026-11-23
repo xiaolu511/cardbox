@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { api, upload } from '../api';
+import { onDropFile } from '../dropbus';
 import { t, useI18n, getLang } from '../i18n';
 
 // 库里存的是 UTC（'YYYY-MM-DD HH:MM:SS'），直接显示会差 8 小时
@@ -15,14 +16,25 @@ const fmtTime = (s) => {
 const isLongNote = (v) => String(v || '').length > 200 || String(v || '').split('\n').length > 6;
 
 const previewOf = (v) => {
-  const raw = String(v || '');
+  const raw = String(v || '').trim();
   const lines = raw.split('\n').map((l) => l.trim()).filter(Boolean);
   const head = lines.slice(0, 4).join('\n');
-  const cut = lines.length > 4 || head.length < raw.trim().length;
-  return cut ? head + '…' : head;
+  const cut = lines.length > 4 || head.length < raw.length;
+  const text = cut ? head + '…' : head;
+  // 单行长文：按字符数兜底，否则整段都会显示出来
+  return text.length > 240 ? text.slice(0, 240) + '…' : text;
 };
 
 export default function NotesPage({ active = true }) {
+  // 从窗口任意位置拖进来的文件，解析完走这里
+  useEffect(() => {
+    const off = onDropFile(({ name, text }) => {
+      setText(text || '');
+      setDropMsg(t('已导入 {name}，共 {n} 字', { name, n: String(text || '').length }));
+      setTimeout(() => setDropMsg(''), 4000);
+    });
+    return off;
+  }, []);
   useI18n();
   const [text, setText] = useState('');
   const [notes, setNotes] = useState([]);
@@ -39,6 +51,7 @@ export default function NotesPage({ active = true }) {
   const [batchMode, setBatchMode] = useState(false);
   const [sel, setSel] = useState(() => new Set());
   const [expanded, setExpanded] = useState(() => new Set());
+  const [dropMsg, setDropMsg] = useState('');
   const toggleExpand = (id) => setExpanded((prev) => {
     const next = new Set(prev);
     if (next.has(id)) next.delete(id); else next.add(id);
@@ -236,6 +249,7 @@ export default function NotesPage({ active = true }) {
         )}
         {importMsg && <span className="text-sm text-muted">{importMsg}</span>}
         {err && <span className="text-red-500 text-sm">{err}</span>}
+        {dropMsg && <span className="text-green-600 text-sm animate-page">{dropMsg}</span>}
       </div>
       <ul className="space-y-3">
         {notes.map((n) => (
