@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import avatarUrl from '../assets/avatar.png';
-import WitchArt from '../assets/WitchArt';
+import witchInk from '../assets/witch-ink.webp';
 import { t, useI18n } from '../i18n';
 
 const CURRENT_VERSION = __APP_VERSION__;
@@ -81,7 +81,20 @@ export default function AboutPage() {
         
         {/* 头部横幅区 */}
         <div className="h-32 bg-primary-600/10 flex items-end justify-center relative overflow-hidden">
-          <WitchArt className="absolute right-6 -bottom-2 h-[112%] w-auto text-muted opacity-50 pointer-events-none select-none" />
+          {/* 用 mask 把线稿当遮罩涂成主题色：像素源自 PNG，不会有矢量描摹的断线 */}
+          <div
+            className="absolute right-6 -bottom-2 h-[112%] aspect-[1400/829] bg-current text-muted opacity-50 pointer-events-none select-none"
+            style={{
+              WebkitMaskImage: `url(${witchInk})`,
+              maskImage: `url(${witchInk})`,
+              WebkitMaskSize: 'contain',
+              maskSize: 'contain',
+              WebkitMaskRepeat: 'no-repeat',
+              maskRepeat: 'no-repeat',
+              WebkitMaskPosition: 'bottom right',
+              maskPosition: 'bottom right',
+            }}
+          />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-card"></div>
         </div>
 
