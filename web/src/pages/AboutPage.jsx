@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import avatarUrl from '../assets/avatar.png';
+import WitchArt from '../assets/WitchArt';
 import { t, useI18n } from '../i18n';
 
 const CURRENT_VERSION = __APP_VERSION__;
@@ -79,7 +80,10 @@ export default function AboutPage() {
       <div className="bg-card rounded-2xl shadow-sm border border-app overflow-hidden transition-colors duration-300">
         
         {/* 头部横幅区 */}
-        <div className="h-32 bg-primary-600/10 flex items-end justify-center relative"></div>
+        <div className="h-32 bg-primary-600/10 flex items-end justify-center relative overflow-hidden">
+          <WitchArt className="absolute right-6 -bottom-2 h-[112%] w-auto text-muted opacity-50 pointer-events-none select-none" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-card"></div>
+        </div>
 
         {/* 软件信息区 */}
         <div className="px-8 pb-8 relative flex flex-col items-center">
