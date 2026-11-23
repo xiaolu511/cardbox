@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '../api';
 import { getStrictness } from '../judgePrefs';
+import { setFocusMode } from '../focusbus';
 import { t, useI18n, getLang } from './../i18n';
 
 const GRADE_CONFIG = [
@@ -52,6 +53,12 @@ export default function ReviewPage({ active }) {
   const [detail, setDetail] = useState(null); // { type, title, items, loading, error }
 
   // 🌟 加载主页数据
+  // hide sidebar while answering, so the user cannot switch tabs mid-review
+  useEffect(() => {
+    setFocusMode(view === 'session');
+    return () => setFocusMode(false);
+  }, [view]);
+
   const loadDashboard = useCallback(async () => {
     setLoading(true);
     setErr('');

@@ -4,6 +4,7 @@ import { applyTheme, readTheme, ensureCustomFont } from './theme';
 import { t, useI18n } from './i18n';
 import { checkForUpdateSilently } from './update';
 import { emitDropFile } from './dropbus';
+import { getFocusMode, subscribeFocusMode } from './focusbus';
 import { upload } from './api';
 import LoginPage from './pages/LoginPage';
 import NotesPage from './pages/NotesPage';
@@ -20,6 +21,7 @@ export default function App() {
   const [dragging, setDragging] = useState(false);
   const [dropErr, setDropErr] = useState('');
   const [dropBusy, setDropBusy] = useState(false);
+  const [focusMode, setFocusMode] = useState(getFocusMode());
 
   useEffect(() => {
     // 主题与自定义字体都只在启动时初始化一次；设置页改完会直接调 applyTheme 即时生效。
@@ -45,6 +47,8 @@ export default function App() {
     });
   }, []);
 
+
+  useEffect(() => subscribeFocusMode(setFocusMode), []);
 
   useEffect(() => {
     if (!token) return;
@@ -126,7 +130,7 @@ export default function App() {
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        <aside className="w-56 bg-sidebar border-r border-app flex flex-col shrink-0 z-20 transition-colors duration-300">
+        {!focusMode && (<aside className="w-56 bg-sidebar border-r border-app flex flex-col shrink-0 z-20 transition-colors duration-300">
           <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto no-drag">
             {token && navItems.map((item) => (
               <button
@@ -157,7 +161,7 @@ export default function App() {
               <p className="text-xs text-center text-muted">{t('请登录以使用')}</p>
             )}
           </div>
-        </aside>
+        </aside>)}
 
         <main className="flex-1 flex flex-col relative overflow-hidden bg-app transition-colors duration-300">
           <div className="flex-1 overflow-y-auto px-6 py-6 z-10">
