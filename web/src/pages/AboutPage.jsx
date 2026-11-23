@@ -83,18 +83,18 @@ export default function AboutPage() {
         <div className="h-32 bg-primary-600/10 flex items-end justify-center relative overflow-hidden">
           {/* 用 mask 把线稿当遮罩涂成主题色：像素源自 PNG，不会有矢量描摹的断线 */}
           <div
-            className="absolute right-0 -bottom-2 h-[112%] aspect-[1400/829] bg-current text-muted opacity-50 pointer-events-none select-none"
+            className="absolute right-0 -bottom-2 h-[112%] aspect-[1400/874] bg-current text-muted opacity-50 pointer-events-none select-none"
             style={{
-              WebkitMaskImage: `url(${witchInk}), linear-gradient(to right, transparent 0%, #000 12%, #000 100%)`,
-              maskImage: `url(${witchInk}), linear-gradient(to right, transparent 0%, #000 12%, #000 100%)`,
+              WebkitMaskImage: `url(${witchInk})`,
+              maskImage: `url(${witchInk})`,
               WebkitMaskSize: 'contain',
               maskSize: 'contain',
               WebkitMaskRepeat: 'no-repeat',
               maskRepeat: 'no-repeat',
-              WebkitMaskPosition: 'bottom right, center',
-              maskPosition: 'bottom right, center',
-              WebkitMaskComposite: 'source-in',
-              maskComposite: 'intersect',
+              WebkitMaskPosition: 'bottom right',
+              maskPosition: 'bottom right',
+              WebkitMaskComposite: 'source-over',
+              maskComposite: 'add',
             }}
           />
           <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-card"></div>
