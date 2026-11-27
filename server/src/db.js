@@ -151,6 +151,15 @@ const backfillUncategorized = () => {
 };
 backfillUncategorized();
 
+// 历史重复清理：同一条笔记下同名的待办/重要事项只留最早一条
+const dedupeNoteItems = () => {
+  db.exec("DELETE FROM todos WHERE id NOT IN (SELECT MIN(id) FROM todos GROUP BY note_id, title)");
+  db.exec("DELETE FROM important_items WHERE id NOT IN (SELECT MIN(id) FROM important_items GROUP BY note_id, title)");
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_todos_note_title ON todos(note_id, title)');
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_important_note_title ON important_items(note_id, title)');
+};
+dedupeNoteItems();
+
 
 // 2. 修复重复拆卡：给 (note_id, question) 加唯一索引
 try {

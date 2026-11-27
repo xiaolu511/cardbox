@@ -487,100 +487,41 @@ export default function ReviewPage({ active }) {
             <p className="text-xl md:text-2xl font-semibold text-main leading-relaxed">{card.question}</p>
           </div>
 
-          {!flipped && (
-            <div>
-              <p className="text-xs text-muted mb-2">{t('先自己写一遍，再对照答案')}</p>
-              <textarea
-                value={typed}
-                readOnly={!!judge?.verdict}
-                onChange={(e) => { if (!judge?.verdict) setTyped(e.target.value); }}
-                rows={4}
-                placeholder={t('用你自己的话回答...')}
-                className="w-full bg-app border border-app rounded-xl p-3 text-sm text-main placeholder:text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-y font-app"
-              />
-              <div className="mt-3 flex items-center gap-3 flex-wrap">
-                <button
-                  onClick={submitAnswer}
-                  disabled={judge?.loading || typed.trim().length === 0}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {judge?.loading ? t('AI 评判中...') : t('提交作答')}
-                </button>
-                {judge?.verdict && <span className="text-xs text-muted">{t('已提交，不可修改')}</span>}
-                {answerErr && <span className="text-xs text-red-500">{answerErr}</span>}
-              </div>
+          {!flipped ? (
+            <div className="text-center pt-2">
+              <button
+                onClick={() => setFlipped(true)}
+                className="px-5 py-2.5 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
+              >
+                {t('显示答案')}
+              </button>
             </div>
-          )}
-
-          {flipped && (
-            <div className="pt-4 border-t border-app animate-page space-y-4">
-              {judge?.verdict && (
-                <div className={`rounded-xl border p-3 ${verdictStyle(judge.verdict)}`}>
-                  <p className="text-sm font-medium">{verdictLabel(judge.verdict)}</p>
-                  {typeof judge.score === 'number' && <span className="ml-2 text-xs opacity-70">{t('得分')} {judge.score}</span>}
-                  {judge.comment && <p className="text-xs mt-1 opacity-80">{judge.comment}</p>}
-                </div>
-              )}
-              {typed.trim() && (
-                <div>
-                  <p className="text-xs font-medium text-muted mb-2 tracking-[0.2em] uppercase">{t('你的作答')}</p>
-                  <p className="text-sm text-main leading-relaxed whitespace-pre-wrap bg-app border border-app rounded-lg p-3">{typed}</p>
-                </div>
-              )}
+          ) : (
+            <div className="pt-4 border-t border-app animate-page space-y-5">
               <div>
                 <p className="text-xs font-medium text-primary-600 mb-2 tracking-[0.2em] uppercase">Answer</p>
                 <p className="text-base text-muted leading-relaxed whitespace-pre-wrap">{card.answer}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted mb-2">{t('这次记得怎么样？')}</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {GRADE_CONFIG.map((g) => (
+                    <button
+                      key={g.grade}
+                      onClick={() => grade(g.grade)}
+                      className={`rounded-xl border px-3 py-3 text-center transition-colors ${g.bg} ${g.border} ${g.text} ${g.hoverBg} ${g.hoverBorder}`}
+                    >
+                      <span className="block text-sm font-semibold">{t(g.label)}</span>
+                      <span className="block text-[11px] mt-1 opacity-70">{t(g.sub)}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {createPortal(
-        <div className="fixed bottom-6 right-6 z-40 animate-page">
-          {!flipped ? (
-            <button
-              onClick={async () => {
-                if (!card || autoGraded) return;
-                setFlipped(true);
-                await api(`/api/cards/${card.id}/review`, { method: 'POST', body: { grade: 'again' } });
-                setSession((s2) => ({ done: s2.done + 1, details: [...s2.details, { ...card, grade: 'again' }] }));
-                setServerStats((s2) => ({
-                  ...s2,
-                  due: Math.max(s2.due - 1, 0),
-                  todayReviewed: s2.todayReviewed + 1,
-                }));
-                setAutoGraded(true);
-              }}
-              className="px-4 py-2.5 bg-card border border-app rounded-xl shadow-lg text-sm font-medium text-main hover:border-primary-500/50 transition-colors"
-            >
-              {t('直接看答案')}
-            </button>
-          ) : (
-            <div className="flex items-center gap-3 bg-card border border-app rounded-xl shadow-lg px-4 py-3">
-              <div className="text-xs text-muted max-w-[220px]">
-                {judge?.verdict ? verdictLabel(judge.verdict) : t('已跳过作答，本题记为忘了')}
-              </div>
-              <button
-                onClick={() => {
-                  const isLast = idx + 1 >= queue.length;
-                  setFlipped(false);
-                  setTyped('');
-                  setJudge(null);
-                  setAutoGraded(false);
-                  setAnswerErr('');
-                  if (isLast) { setView('summary'); return; }
-                  setIdx((i) => i + 1);
-                }}
-                className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors whitespace-nowrap"
-              >
-                {idx + 1 >= queue.length ? t('完成本轮') : t('进入下一题')}
-              </button>
-            </div>
-          )}
-        </div>,
-        document.body
-      )}
     </div>
   );
 }

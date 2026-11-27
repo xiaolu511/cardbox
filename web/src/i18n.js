@@ -240,6 +240,10 @@ const TW = {
   '分析完成': '分析完成',
   '识别到的分类：{name}': '識別到的分類：{name}',
   '生成 {n} 张卡片': '生成 {n} 張卡片',
+  '显示答案': '顯示答案',
+  '这次记得怎么样？': '這次記得怎麼樣？',
+  '确定要删除选中的 {n} 项吗？': '確定要刪除選中的 {n} 項嗎？',
+  '删除选中': '刪除選中',
 };
 
 const EN = {
@@ -458,6 +462,10 @@ const EN = {
   '分析完成': 'Analysis complete',
   '识别到的分类：{name}': 'Detected category: {name}',
   '生成 {n} 张卡片': 'Created {n} cards',
+  '显示答案': 'Show answer',
+  '这次记得怎么样？': 'How well did you remember it?',
+  '确定要删除选中的 {n} 项吗？': 'Delete the {n} selected item(s)?',
+  '删除选中': 'Delete selected',
 };
 
 const DICTS = { zhCN: null, zhTW: TW, en: EN };

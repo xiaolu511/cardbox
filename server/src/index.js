@@ -343,22 +343,40 @@ app.post('/api/notes/:id/apply', { preHandler: auth }, async (req, reply) => {
     const insCard = db.prepare('INSERT OR IGNORE INTO cards (note_id, question, answer, tags) VALUES (?, ?, ?, ?)');
     const insTodo = db.prepare('INSERT INTO todos (user_id, note_id, title, due_at) VALUES (?, ?, ?, ?)');
     const insImp = db.prepare('INSERT INTO important_items (user_id, note_id, title, detail) VALUES (?, ?, ?, ?)');
+    // 重复分析同一条笔记：按「去掉空白与标点」的问题文本比对，命中就更新答案，不重复插卡
+    const norm = (v) => String(v || '').toLowerCase().replace(/[\s\p{P}]+/gu, '');
+    const cardIndex = new Map(
+      db.prepare('SELECT id, question FROM cards WHERE note_id = ?').all(note.id).map((c) => [norm(c.question), c.id])
+    );
+    const updCard = db.prepare('UPDATE cards SET answer = ?, tags = ? WHERE id = ?');
     for (const c of (data.cards || [])) {
       const q = String(c.question || '').trim().slice(0, 500);
       const a = String(c.answer || '').trim().slice(0, 5000);
       if (!q || !a) continue;
-      const info = insCard.run(note.id, q, a, JSON.stringify(Array.isArray(c.tags) ? c.tags.slice(0, 6) : []));
-      if (info.changes) cards += 1;
+      const tags = JSON.stringify(Array.isArray(c.tags) ? c.tags.slice(0, 6) : []);
+      const key = norm(q);
+      const hit = cardIndex.get(key);
+      if (hit) {
+        updCard.run(a, tags, hit);
+        cards += 1;
+      } else {
+        const info = insCard.run(note.id, q, a, tags);
+        if (info.changes) { cardIndex.set(key, Number(info.lastInsertRowid)); cards += 1; }
+      }
     }
     for (const t of (data.todos || [])) {
       const title = String(t.title || '').trim().slice(0, 200);
       if (!title) continue;
+      const dupTodo = db.prepare('SELECT id FROM todos WHERE note_id = ? AND title = ?').get(note.id, title);
+      if (dupTodo) continue;
       insTodo.run(req.user.uid, note.id, title, t.due_at ? String(t.due_at).slice(0, 19) : null);
       todos += 1;
     }
     for (const it of (data.important || [])) {
       const title = String(it.title || '').trim().slice(0, 200);
       if (!title) continue;
+      const dupImp = db.prepare('SELECT id FROM important_items WHERE note_id = ? AND title = ?').get(note.id, title);
+      if (dupImp) continue;
       insImp.run(req.user.uid, note.id, title, String(it.detail || '').slice(0, 1000));
       important += 1;
     }
@@ -378,7 +396,22 @@ app.get('/api/categories', { preHandler: auth }, async (req) => {
     '  (SELECT COUNT(*) FROM important_items i WHERE i.user_id = c.user_id AND i.note_id IN (SELECT id FROM notes WHERE category_id = c.id)) AS importantCount',
     'FROM categories c WHERE c.user_id = ? ORDER BY c.name',
   ].join(' ')).all(req.user.uid);
-  return rows;
+  // 给每个分类补两条预览，卡片页列表里不用点进去就能看到
+  const todoQ = db.prepare([
+    'SELECT t.title, t.status FROM todos t',
+    'JOIN notes n ON n.id = t.note_id',
+    'WHERE n.category_id = ? AND t.user_id = ? ORDER BY t.status, t.id DESC LIMIT 2',
+  ].join(' '));
+  const impQ = db.prepare([
+    'SELECT i.title FROM important_items i',
+    'JOIN notes n ON n.id = i.note_id',
+    'WHERE n.category_id = ? AND i.user_id = ? ORDER BY i.id DESC LIMIT 2',
+  ].join(' '));
+  return rows.map((r) => ({
+    ...r,
+    previewTodos: todoQ.all(r.id, req.user.uid).map((x) => x.title),
+    previewImportant: impQ.all(r.id, req.user.uid).map((x) => x.title),
+  }));
 });
 
 app.post('/api/categories', { preHandler: auth }, async (req, reply) => {
@@ -419,6 +452,20 @@ app.get('/api/categories/:id/overview', { preHandler: auth }, async (req, reply)
   const important = db.prepare('SELECT i.id, i.title, i.detail, i.note_id FROM important_items i JOIN notes n ON n.id = i.note_id WHERE n.user_id = ?' + scope + ' ORDER BY i.id DESC LIMIT 200').all(req.user.uid);
   const notes = db.prepare('SELECT n.id, n.raw_text, n.created_at FROM notes n WHERE n.user_id = ?' + scope + ' ORDER BY n.id DESC LIMIT 200').all(req.user.uid);
   return { category: cat, cards, todos, important, notes };
+});
+
+app.delete('/api/todos/:id', { preHandler: auth }, async (req, reply) => {
+  const row = db.prepare('SELECT id FROM todos WHERE id = ? AND user_id = ?').get(req.params.id, req.user.uid);
+  if (!row) return reply.code(404).send({ error: '待办不存在' });
+  db.prepare('DELETE FROM todos WHERE id = ?').run(row.id);
+  return { ok: true };
+});
+
+app.delete('/api/important/:id', { preHandler: auth }, async (req, reply) => {
+  const row = db.prepare('SELECT id FROM important_items WHERE id = ? AND user_id = ?').get(req.params.id, req.user.uid);
+  if (!row) return reply.code(404).send({ error: '重要事项不存在' });
+  db.prepare('DELETE FROM important_items WHERE id = ?').run(row.id);
+  return { ok: true };
 });
 
 app.patch('/api/todos/:id', { preHandler: auth }, async (req, reply) => {

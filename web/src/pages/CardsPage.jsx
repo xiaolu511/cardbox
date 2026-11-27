@@ -37,6 +37,8 @@ export default function CardsPage({ active = true }) {
   const [batchMode, setBatchMode] = useState(false);
   const [sel, setSel] = useState(() => new Set());
   const [batchBusy, setBatchBusy] = useState(false);
+  const [selTodos, setSelTodos] = useState(() => new Set());
+  const [selImportant, setSelImportant] = useState(() => new Set());
   const busyRef = useRef(false);
 
   // 分类详情（知识点 / 待办 / 重要事项）
@@ -128,6 +130,33 @@ export default function CardsPage({ active = true }) {
     });
   }
 
+  function toggleSet(setter, id) {
+    setter((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  async function batchDeleteMisc() {
+    const n = selTodos.size + selImportant.size;
+    if (!n) return;
+    if (!window.confirm(t('确定要删除选中的 {n} 项吗？', { n }))) return;
+    setBatchBusy(true);
+    try {
+      for (const id of selTodos) await api('/api/todos/' + id, { method: 'DELETE' });
+      for (const id of selImportant) await api('/api/important/' + id, { method: 'DELETE' });
+      setSelTodos(new Set());
+      setSelImportant(new Set());
+      setBatchMode(false);
+      if (activeCat && activeCat.id !== 'all') await loadOverview(activeCat.id);
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setBatchBusy(false);
+    }
+  }
+
   async function batchDelete() {
     if (sel.size === 0) return;
     if (!confirm(t('确定要删除选中的 {n} 张卡片吗？', { n: sel.size }))) return;
@@ -184,6 +213,16 @@ export default function CardsPage({ active = true }) {
                 {c.todoCount ? ` · ${t('{n} 条待办', { n: c.todoCount })}` : ''}
                 {c.importantCount ? ` · ${t('{n} 条重要', { n: c.importantCount })}` : ''}
               </p>
+              {(c.previewTodos?.length > 0 || c.previewImportant?.length > 0) && (
+                <div className="mt-3 pt-3 border-t border-app space-y-1">
+                  {(c.previewTodos || []).map((title, i) => (
+                    <p key={'t' + i} className="text-xs text-muted truncate">☐ {title}</p>
+                  ))}
+                  {(c.previewImportant || []).map((title, i) => (
+                    <p key={'i' + i} className="text-xs text-muted truncate">★ {title}</p>
+                  ))}
+                </div>
+              )}
             </button>
           ))}
         </div>
@@ -209,6 +248,19 @@ export default function CardsPage({ active = true }) {
           ← {t('全部分类')}
         </button>
         <h2 className="font-bold text-main">{activeCat.name}</h2>
+        <button
+          type="button"
+          onClick={() => {
+            const next = !batchMode;
+            setBatchMode(next);
+            setSel(new Set()); setSelTodos(new Set()); setSelImportant(new Set());
+          }}
+          title={t('删除')}
+          className={`ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors ${batchMode ? 'border-red-500/50 text-red-500 bg-red-500/10' : 'border-app text-muted hover:text-main hover:border-primary-500/50'}`}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-7H4m5-8V3a1 1 0 011-1h4a1 1 0 011 1v2m-6 0h6" /></svg>
+          {batchMode ? t('取消') : t('删除')}
+        </button>
       </div>
 
       <div className="flex gap-1 p-1 rounded-xl bg-app border border-app w-fit">
@@ -376,19 +428,31 @@ export default function CardsPage({ active = true }) {
           {todos.length === 0 && (
             <div className="py-16 text-center text-muted text-sm">{t('还没有待办，分析笔记时会自动提取。')}</div>
           )}
+          {batchMode && (
+            <div className="flex items-center gap-3 text-sm">
+              <span className="text-muted">{t('已选 {n} 条', { n: selTodos.size })}</span>
+              <button onClick={batchDeleteMisc} disabled={batchBusy || selTodos.size === 0} className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50">{t('删除选中')}</button>
+            </div>
+          )}
           {todos.map((item) => (
             <div
               key={item.id}
-              className={`flex items-start gap-3 p-4 rounded-xl border transition-colors ${item.status === 'done' ? 'border-app bg-app/40' : 'border-app bg-card hover:border-primary-500/40'}`}
+              onClick={() => { if (batchMode) toggleSet(setSelTodos, item.id); }}
+              className={`flex items-start gap-3 p-4 rounded-xl border transition-colors ${batchMode && selTodos.has(item.id) ? 'border-primary-500/60 ring-1 ring-primary-500/30' : ''} ${item.status === 'done' ? 'border-app bg-app/40' : 'border-app bg-card hover:border-primary-500/40'}`}
             >
-              <button
+              {batchMode && (
+                <span className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center shrink-0 ${selTodos.has(item.id) ? 'bg-primary-600 border-primary-600 text-white' : 'border-app text-transparent'}`}>
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
+                </span>
+              )}
+              {!batchMode && <button
                 type="button"
                 onClick={() => toggleTodo(item)}
                 className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${item.status === 'done' ? 'bg-primary-600 border-primary-600 text-white' : 'border-app text-transparent hover:border-primary-500'}`}
                 aria-label={t('标记完成')}
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
-              </button>
+              </button>}
               <div className="flex-1 min-w-0">
                 <p className={`text-sm ${item.status === 'done' ? 'line-through text-muted' : 'text-main'}`}>{item.title}</p>
                 <p className="text-xs text-muted mt-1">
@@ -406,8 +470,18 @@ export default function CardsPage({ active = true }) {
           {important.length === 0 && (
             <div className="md:col-span-2 py-16 text-center text-muted text-sm">{t('还没有重要事项。')}</div>
           )}
+          {batchMode && (
+            <div className="md:col-span-2 flex items-center gap-3 text-sm">
+              <span className="text-muted">{t('已选 {n} 条', { n: selImportant.size })}</span>
+              <button onClick={batchDeleteMisc} disabled={batchBusy || selImportant.size === 0} className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50">{t('删除选中')}</button>
+            </div>
+          )}
           {important.map((item) => (
-            <div key={item.id} className="border border-app rounded-xl p-5 bg-card space-y-2">
+            <div
+              key={item.id}
+              onClick={() => { if (batchMode) toggleSet(setSelImportant, item.id); }}
+              className={`border rounded-xl p-5 bg-card space-y-2 transition-colors ${batchMode && selImportant.has(item.id) ? 'border-primary-500/60 ring-1 ring-primary-500/30' : 'border-app'}`}
+            >
               <p className="text-sm font-medium text-main">{item.title}</p>
               {item.detail && <p className="text-sm text-muted whitespace-pre-wrap">{item.detail}</p>}
             </div>
