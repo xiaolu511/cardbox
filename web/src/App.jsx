@@ -155,7 +155,7 @@ export default function App() {
 
 
         <main className="flex-1 flex flex-col relative overflow-hidden bg-app transition-colors duration-300">
-          <div className="flex-1 overflow-y-auto px-6 py-6 z-10">
+          <div className="flex-1 overflow-y-auto px-6 py-6 z-10 [scrollbar-gutter:stable]">
              {!token ? (
                <div className="h-full flex justify-center items-center pb-20">
                  <LoginPage onLogin={(t) => { setToken(t); _setToken(t); }} />

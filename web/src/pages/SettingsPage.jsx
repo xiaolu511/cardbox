@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { api } from '../api';
 import AboutPage from './AboutPage';
 import { applyTheme, readTheme, saveTheme, getContrastColor, importCustomFont, resetTheme } from '../theme';
@@ -18,10 +18,11 @@ export default function SettingsPage({ active = true }) {
   const [sec, setSec] = useState('ai');
 
   // 换二级菜单时把内容拉回顶部，并保证高度不塌，避免整页跟着跳
-  useEffect(() => {
+  // 用 layout effect：在绘制前回顶，避免先画旧位置再跳一下
+  useLayoutEffect(() => {
     if (!active) return;
     const box = document.querySelector('main .overflow-y-auto');
-    if (box) box.scrollTo({ top: 0 });
+    if (box) box.scrollTop = 0;
   }, [sec, active]);
   const [key, setKey] = useState('');
   const [status, setStatus] = useState({ hasKey: false, maskedKey: '' });
