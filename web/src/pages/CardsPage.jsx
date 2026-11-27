@@ -339,7 +339,6 @@ export default function CardsPage({ active = true }) {
             <div className="w-full max-w-sm bg-card border border-app rounded-2xl shadow-2xl overflow-hidden">
               <div className="px-5 pt-5 pb-3">
                 <h3 className="font-semibold text-main">{t('新建分类')}</h3>
-                <p className="text-xs text-muted mt-1">{t('分类由你自己决定，AI 不会替你归类。')}</p>
               </div>
               <div className="px-5 pb-4">
                 <input
