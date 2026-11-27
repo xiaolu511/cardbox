@@ -85,10 +85,20 @@ app.get('/api/notes', { preHandler: auth }, async (req) => {
   const limit = Math.max(1, parseInt(req.query.limit) || 20);
   const offset = (page - 1) * limit;
 
-  const notes = db.prepare('SELECT * FROM notes WHERE user_id = ? ORDER BY id DESC LIMIT ? OFFSET ?')
-    .all(req.user.uid, limit, offset);
-  
-  const { total } = db.prepare('SELECT count(*) as total FROM notes WHERE user_id = ?').get(req.user.uid);
+  const where = ['user_id = ?'];
+  const params = [req.user.uid];
+  const keyword = String(req.query.q || '').trim();
+  if (keyword) { where.push('raw_text LIKE ?'); params.push('%' + keyword + '%'); }
+  const onlyCat = parseInt(req.query.categoryId);
+  if (Number.isFinite(onlyCat)) { where.push('category_id = ?'); params.push(onlyCat); }
+  const excludeCat = parseInt(req.query.excludeCategoryId);
+  if (Number.isFinite(excludeCat)) { where.push('(category_id IS NULL OR category_id <> ?)'); params.push(excludeCat); }
+  const cond = where.join(' AND ');
+
+  const notes = db.prepare(`SELECT * FROM notes WHERE ${cond} ORDER BY id DESC LIMIT ? OFFSET ?`)
+    .all(...params, limit, offset);
+
+  const { total } = db.prepare(`SELECT count(*) as total FROM notes WHERE ${cond}`).get(...params);
   return { data: notes, hasMore: offset + notes.length < total };
 });
 

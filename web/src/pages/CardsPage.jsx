@@ -44,6 +44,17 @@ export default function CardsPage({ active = true }) {
   // 分类详情（知识点 / 待办 / 重要事项）
   const [overview, setOverview] = useState({ cards: [], todos: [], important: [] });
 
+  // 新建分类 / 管理分类里的笔记
+  const [newCatOpen, setNewCatOpen] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [catBusy, setCatBusy] = useState(false);
+  const [manageCat, setManageCat] = useState(null);
+  const [manageQ, setManageQ] = useState('');
+  const [managePool, setManagePool] = useState([]);
+  const [manageOwn, setManageOwn] = useState([]);
+  const [manageSel, setManageSel] = useState(() => new Set());
+  const [manageBusy, setManageBusy] = useState(false);
+
   async function loadCats() {
     try {
       const rows = await api('/api/categories');
@@ -63,6 +74,69 @@ export default function CardsPage({ active = true }) {
     if (activeCat) loadOverview(activeCat.id);
     else loadCats();
   }, [active, activeCat]);
+
+  async function createCategory() {
+    const name = newCatName.trim();
+    if (!name) { setCatErr(t('请填写分类名称')); return; }
+    setCatBusy(true);
+    try {
+      await api('/api/categories', { method: 'POST', body: { name } });
+      setNewCatOpen(false);
+      setNewCatName('');
+      setCatErr('');
+      await loadCats();
+    } catch (e) { setCatErr(e.message); } finally { setCatBusy(false); }
+  }
+
+  async function loadManage(cat, keyword = '') {
+    setManageBusy(true);
+    try {
+      const [pool, own] = await Promise.all([
+        api('/api/notes?limit=100&excludeCategoryId=' + cat.id + '&q=' + encodeURIComponent(keyword)),
+        api('/api/notes?limit=100&categoryId=' + cat.id),
+      ]);
+      setManagePool(pool.data || []);
+      setManageOwn(own.data || []);
+      setManageSel(new Set());
+    } catch (e) { setCatErr(e.message); } finally { setManageBusy(false); }
+  }
+
+  function openManage(cat) {
+    setManageCat(cat);
+    setManageQ('');
+    loadManage(cat, '');
+  }
+
+  async function addToCategory() {
+    if (!manageCat || manageSel.size === 0) return;
+    setManageBusy(true);
+    try {
+      for (const id of manageSel) {
+        await api('/api/notes/' + id + '/category', { method: 'PATCH', body: { categoryId: manageCat.id } });
+      }
+      await loadManage(manageCat, manageQ);
+      await loadCats();
+    } catch (e) { setCatErr(e.message); } finally { setManageBusy(false); }
+  }
+
+  async function moveOut(id) {
+    setManageBusy(true);
+    try {
+      await api('/api/notes/' + id + '/category', { method: 'PATCH', body: { categoryId: null } });
+      await loadManage(manageCat, manageQ);
+      await loadCats();
+    } catch (e) { setCatErr(e.message); } finally { setManageBusy(false); }
+  }
+
+  async function deleteNote(id) {
+    if (!confirm(t('⚠️ 确定删除这条笔记吗？它的卡片和待办也会一起删除。'))) return;
+    setManageBusy(true);
+    try {
+      await api('/api/notes/' + id, { method: 'DELETE' });
+      await loadManage(manageCat, manageQ);
+      await loadCats();
+    } catch (e) { setCatErr(e.message); } finally { setManageBusy(false); }
+  }
 
   async function load(query = '', reset = true) {
     if (busyRef.current) return;
@@ -188,6 +262,14 @@ export default function CardsPage({ active = true }) {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-main">{t('分类')}</h2>
+          <button
+            type="button"
+            onClick={() => { setNewCatName(''); setNewCatOpen(true); }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+            {t('新建分类')}
+          </button>
         </div>
         {catErr && <p className="text-red-500 text-sm">{catErr}</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -215,6 +297,14 @@ export default function CardsPage({ active = true }) {
             </button>
             <button
               type="button"
+              title={t('管理笔记')}
+              onClick={(e) => { e.stopPropagation(); openManage(c); }}
+              className="absolute top-3 right-10 p-1.5 rounded-md text-muted opacity-40 hover:opacity-100 hover:text-primary-600 hover:bg-primary-50 transition-all"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+            </button>
+            <button
+              type="button"
               title={t('删除分类')}
               onClick={async (e) => {
                 e.stopPropagation();
@@ -232,7 +322,114 @@ export default function CardsPage({ active = true }) {
           ))}
         </div>
         {cats.length === 0 && !catErr && (
-          <div className="py-16 text-center text-muted text-sm">{t('还没有分类，分析笔记时会让 AI 自动归类。')}</div>
+          <div className="py-16 text-center text-muted text-sm">{t('还没有分类，点右上角「新建分类」可以手动建一个。')}</div>
+        )}
+
+        {newCatOpen && createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6">
+            <div className="w-full max-w-sm bg-card border border-app rounded-2xl shadow-2xl overflow-hidden">
+              <div className="px-5 pt-5 pb-3">
+                <h3 className="font-semibold text-main">{t('新建分类')}</h3>
+                <p className="text-xs text-muted mt-1">{t('分类由你自己决定，AI 不会替你归类。')}</p>
+              </div>
+              <div className="px-5 pb-4">
+                <input
+                  autoFocus
+                  value={newCatName}
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') createCategory(); }}
+                  placeholder={t('例如：考研英语')}
+                  className="w-full border border-app bg-transparent text-main p-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                />
+              </div>
+              <div className="px-5 py-3 flex justify-end gap-2 border-t border-app">
+                <button type="button" onClick={() => setNewCatOpen(false)} className="px-4 py-1.5 text-sm text-muted hover:text-main">{t('取消')}</button>
+                <button type="button" disabled={catBusy} onClick={createCategory} className="px-4 py-1.5 text-sm rounded-lg bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-50">
+                  {catBusy ? t('保存中...') : t('创建')}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+        {manageCat && createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6">
+            <div className="w-full max-w-2xl max-h-[80vh] bg-card border border-app rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+              <div className="px-5 py-4 border-b border-app flex items-start justify-between gap-4">
+                <div>
+                  <h3 className="font-semibold text-main">{t('管理「{name}」里的笔记', { name: manageCat.name })}</h3>
+                  <p className="text-xs text-muted mt-1">{t('把笔记加进来，或从分类里移出、删除。')}</p>
+                </div>
+                <button type="button" onClick={() => setManageCat(null)} className="text-muted hover:text-main">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-5 space-y-6">
+                <section className="space-y-2">
+                  <h4 className="text-sm font-medium text-main">{t('本分类已有 {n} 条', { n: manageOwn.length })}</h4>
+                  {manageOwn.length === 0 && <p className="text-sm text-muted">{t('这个分类里还没有笔记')}</p>}
+                  {manageOwn.map((n) => (
+                    <div key={n.id} className="flex items-start gap-3 border border-app rounded-xl p-3">
+                      <p className="flex-1 text-sm text-main leading-relaxed line-clamp-2">{summarize(n.raw_text)}</p>
+                      <button type="button" disabled={manageBusy} onClick={() => moveOut(n.id)} className="text-xs text-muted hover:text-main shrink-0">{t('移出')}</button>
+                      <button type="button" disabled={manageBusy} onClick={() => deleteNote(n.id)} className="text-xs text-red-500 hover:text-red-600 shrink-0">{t('删除')}</button>
+                    </div>
+                  ))}
+                </section>
+
+                <section className="space-y-2">
+                  <h4 className="text-sm font-medium text-main">{t('添加笔记到这个分类')}</h4>
+                  <form onSubmit={(e) => { e.preventDefault(); loadManage(manageCat, manageQ); }} className="flex gap-2">
+                    <input
+                      value={manageQ}
+                      onChange={(e) => setManageQ(e.target.value)}
+                      placeholder={t('搜索笔记内容...')}
+                      className="flex-1 border border-app bg-transparent text-main p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                    />
+                    <button className="px-4 bg-app border border-app text-main rounded-lg text-sm hover-item">{t('搜索')}</button>
+                  </form>
+                  {managePool.length === 0 && <p className="text-sm text-muted">{t('没有可添加的笔记')}</p>}
+                  <div className="space-y-1.5">
+                    {managePool.map((n) => {
+                      const checked = manageSel.has(n.id);
+                      return (
+                        <label key={n.id} className="flex items-start gap-3 border border-app rounded-xl p-3 cursor-pointer hover:border-primary-500/50">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              setManageSel((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(n.id)) next.delete(n.id); else next.add(n.id);
+                                return next;
+                              });
+                            }}
+                            className="mt-1 w-4 h-4 accent-primary-600"
+                          />
+                          <span className="flex-1 text-sm text-main leading-relaxed line-clamp-2">{summarize(n.raw_text)}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </section>
+              </div>
+
+              <div className="px-5 py-3 border-t border-app flex items-center justify-between">
+                <span className="text-xs text-muted">{t('已选 {n} 条', { n: manageSel.size })}</span>
+                <button
+                  type="button"
+                  disabled={manageBusy || manageSel.size === 0}
+                  onClick={addToCategory}
+                  className="px-4 py-1.5 text-sm rounded-lg bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-40"
+                >
+                  {manageBusy ? t('处理中...') : t('加入本分类')}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
         )}
       </div>
     );
