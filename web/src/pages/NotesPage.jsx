@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useModalPresence } from '../modalAnim';
+import { useModalPresence, useHeld } from '../modalAnim';
 import { api, upload } from '../api';
 import { onDropFile } from '../dropbus';
 import { t, useI18n, getLang } from '../i18n';
@@ -49,6 +49,7 @@ export default function NotesPage({ active = true }) {
 
   // 弹窗进出场（关闭时先播退场再卸载）
   const splitModal = useModalPresence(!!splitTarget);
+  const splitView = useHeld(splitTarget);
   const progressModal = useModalPresence(progress.open);
   // 导入到哪个分类：'auto' = 让 AI 判断，数字 = 已有分类 id，'new' = 新建
   const [categories, setCategories] = useState([]);
@@ -390,12 +391,12 @@ export default function NotesPage({ active = true }) {
           <div className={`w-full max-w-md bg-card border border-app rounded-2xl shadow-2xl overflow-hidden modal-panel ${splitModal.closing ? 'closing' : ''}`}>
             <div className="px-5 py-4 border-b border-app">
               <h3 className="font-bold text-main">
-                {splitTarget.ids.length > 1 ? t('批量分析') : t('拆成卡片')}
+                {splitView.ids.length > 1 ? t('批量分析') : t('拆成卡片')}
               </h3>
               <p className="text-xs text-muted mt-1 truncate">
-                {splitTarget.ids.length > 1
-                  ? t('已选 {n} 条', { n: splitTarget.ids.length })
-                  : (notes.find((x) => x.id === splitTarget.ids[0])?.raw_text || '')}
+                {splitView.ids.length > 1
+                  ? t('已选 {n} 条', { n: splitView.ids.length })
+                  : (notes.find((x) => x.id === splitView.ids[0])?.raw_text || '')}
               </p>
             </div>
             <div className="px-5 py-5 space-y-4">
@@ -459,7 +460,7 @@ export default function NotesPage({ active = true }) {
               <button type="button" onClick={() => { setSplitTarget(null); setAnalysisErr(''); }} className="px-4 py-2 rounded-lg text-muted hover-item transition-colors">{t('取消')}</button>
               <button
                 type="button"
-                onClick={() => runAnalysis(splitTarget.ids)}
+                onClick={() => runAnalysis(splitView.ids)}
                 disabled={busyId !== null}
                 className={`px-4 py-2 rounded-lg text-white transition-colors disabled:opacity-50 ${hasKey === false ? 'bg-primary-600/40 cursor-not-allowed' : 'bg-primary-600 hover:bg-primary-700'}`}
               >{t('开始分析')}</button>

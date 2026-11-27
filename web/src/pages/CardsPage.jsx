@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useModalPresence } from '../modalAnim';
+import { useModalPresence, useHeld } from '../modalAnim';
 import { api } from '../api';
 import ReviewPage from './ReviewPage';
 import { useSwitchClass } from '../switchAnim';
@@ -83,6 +83,7 @@ export default function CardsPage({ active = true }) {
   const newCatModal = useModalPresence(newCatOpen);
   const manageModal = useModalPresence(!!manageCat);
   const editModal = useModalPresence(!!editing);
+  const editingView = useHeld(editing);
 
   async function loadCats() {
     try {
@@ -718,7 +719,7 @@ export default function CardsPage({ active = true }) {
           document.body
         )}
 {editModal.mounted && createPortal(
-        <EditCardModal closing={editModal.closing} card={editing} onClose={() => setEditing(null)} onSaved={onSaved} onUpdated={onUpdated} />,
+        <EditCardModal closing={editModal.closing} card={editingView} onClose={() => setEditing(null)} onSaved={onSaved} onUpdated={onUpdated} />,
         document.body
       )}
     </div>

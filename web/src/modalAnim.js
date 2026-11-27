@@ -25,3 +25,11 @@ export function useModalPresence(open, duration = DURATION) {
 
   return { mounted: mounted || !!open, closing };
 }
+
+// 弹窗退场时，触发它打开的数据可能已经被清空（例如 setDetail(null)）。
+// 这里把最后一次非空值留住，避免退场那一帧去读 null 的字段。
+export function useHeld(value) {
+  const [held, setHeld] = useState(value);
+  if (value != null && value !== held) setHeld(value);
+  return value == null ? held : value;
+}

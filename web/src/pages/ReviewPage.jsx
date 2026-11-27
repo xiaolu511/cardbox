@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useModalPresence } from '../modalAnim';
+import { useModalPresence, useHeld } from '../modalAnim';
 import { api } from '../api';
 import { getStrictness } from '../judgePrefs';
 import { setFocusMode } from '../focusbus';
@@ -57,6 +57,7 @@ export default function ReviewPage({ active, categoryId = 'all' }) {
 
   // 弹窗进出场（关闭时先播退场再卸载）
   const detailModal = useModalPresence(!!detail);
+  const detailView = useHeld(detail);
 
   // 🌟 加载主页数据
   // hide sidebar while answering, so the user cannot switch tabs mid-review
@@ -140,8 +141,8 @@ export default function ReviewPage({ active, categoryId = 'all' }) {
 
   // 加练：直接拿详情里的这批卡当队列，走正常复习流程（评分照常写流水、推后下次时间）
   const startExtra = () => {
-    if (!detail || detail.items.length === 0) return;
-    setQueue(detail.items);
+    if (!detail || detailView.items.length === 0) return;
+    setQueue(detailView.items);
     setIdx(0);
     setFlipped(false);
     setTyped('');
@@ -384,20 +385,20 @@ export default function ReviewPage({ active, categoryId = 'all' }) {
           <div className={`w-full max-w-lg max-h-[70vh] bg-card border border-app rounded-2xl shadow-2xl flex flex-col overflow-hidden modal-panel ${detailModal.closing ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
             <div className="flex items-start justify-between p-5 border-b border-app">
               <div>
-                <h3 className="font-bold text-main">{t(detail.title)}</h3>
+                <h3 className="font-bold text-main">{t(detailView.title)}</h3>
                 <p className="text-xs text-muted mt-0.5">
-                  {detail.loading ? t('加载中...') : t('共 {n} 张', { n: detail.items.length })}
+                  {detailView.loading ? t('加载中...') : t('共 {n} 张', { n: detailView.items.length })}
                 </p>
               </div>
               <button onClick={() => setDetail(null)} className="p-1.5 hover:bg-app rounded-lg text-muted hover:text-main transition-colors">✕</button>
             </div>
 
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {detail.error && <p className="text-xs text-red-500">{detail.error}</p>}
-              {!detail.loading && !detail.error && detail.items.length === 0 && (
+              {detailView.error && <p className="text-xs text-red-500">{detailView.error}</p>}
+              {!detailView.loading && !detailView.error && detailView.items.length === 0 && (
                 <p className="text-sm text-muted text-center mt-10">{t('这个分类下还没有卡片')}</p>
               )}
-              {detail.items.map(c => (
+              {detailView.items.map(c => (
                 <div key={c.id} className="p-3 bg-app border border-app rounded-xl">
                   <p className="text-sm font-medium text-main">{c.question}</p>
                   <p className="text-xs text-muted mt-1 line-clamp-2">{c.answer}</p>
@@ -408,10 +409,10 @@ export default function ReviewPage({ active, categoryId = 'all' }) {
             <div className="p-4 border-t border-app">
               <button
                 onClick={startExtra}
-                disabled={detail.loading || detail.items.length === 0}
+                disabled={detailView.loading || detailView.items.length === 0}
                 className="w-full py-2.5 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {t('加练这 {n} 张', { n: detail.items.length })}
+                {t('加练这 {n} 张', { n: detailView.items.length })}
               </button>
             </div>
           </div>
