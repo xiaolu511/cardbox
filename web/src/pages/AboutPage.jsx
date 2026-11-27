@@ -113,7 +113,7 @@ export default function AboutPage() {
           {/* 发现新版本面板：只用已有映射的 primary-600 档 + 主题 token，
               否则 primary-50/200/700 这些色阶没在 @theme 里，class 会整个不生成（出来是一圈黑边） */}
           {updateState === 'update_available' && updateInfo && (
-            <div className="mt-4 w-full p-4 bg-primary-600/10 border border-primary-600/30 rounded-xl animate-page">
+            <div className="mt-4 w-full p-4 bg-primary-600/10 border border-primary-600/30 rounded-xl fade-in">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="font-bold text-primary-600">{t('发现新版本 v{n}', { n: updateInfo.latestVersion })}</h4>
                 <button onClick={() => setUpdateState('idle')} className="text-xs text-primary-600 hover:underline">{t('稍后提醒')}</button>

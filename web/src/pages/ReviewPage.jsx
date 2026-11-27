@@ -376,7 +376,7 @@ export default function ReviewPage({ active, categoryId = 'all' }) {
 
       {/* 统计卡详情抽屉：挂到 body 上，否则外层 animate-page 的 transform 会把 fixed 的参照系变成那层容器 */}
       {detail && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6 animate-page" onClick={() => setDetail(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6 fade-in" onClick={() => setDetail(null)}>
           <div className="w-full max-w-lg max-h-[70vh] bg-card border border-app rounded-2xl shadow-2xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-start justify-between p-5 border-b border-app">
               <div>
@@ -446,7 +446,7 @@ export default function ReviewPage({ active, categoryId = 'all' }) {
         </button>
 
         {detailGrade && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-page" onClick={() => setDetailGrade(null)}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm fade-in" onClick={() => setDetailGrade(null)}>
             <div className="bg-card w-full max-w-lg max-h-[80vh] rounded-2xl shadow-2xl border border-app flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between p-5 border-b border-app bg-app/50">
                 <h3 className="font-bold text-main flex items-center gap-2">{t('明细 ({n})', { n: currentDetails.length })}</h3>
@@ -527,7 +527,7 @@ export default function ReviewPage({ active, categoryId = 'all' }) {
           )}
 
           {flipped && (
-            <div className="pt-4 border-t border-app animate-page space-y-4">
+            <div className="pt-4 border-t border-app fade-in space-y-4">
               {judge?.verdict && (
                 <div className={`rounded-xl border p-3 ${verdictStyle(judge.verdict)}`}>
                   <p className="text-sm font-medium">{verdictLabel(judge.verdict)}</p>
@@ -551,7 +551,7 @@ export default function ReviewPage({ active, categoryId = 'all' }) {
       </div>
 
       {createPortal(
-        <div className="fixed bottom-6 right-6 z-40 animate-page">
+        <div className="fixed bottom-6 right-6 z-40 fade-in">
           {!flipped ? (
             <button
               onClick={async () => {

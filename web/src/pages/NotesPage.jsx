@@ -330,7 +330,7 @@ export default function NotesPage({ active = true }) {
         )}
         {importMsg && <span className="text-sm text-muted">{importMsg}</span>}
         {err && <span className="text-red-500 text-sm">{err}</span>}
-        {dropMsg && <span className="text-green-600 text-sm animate-page">{dropMsg}</span>}
+        {dropMsg && <span className="text-green-600 text-sm fade-in">{dropMsg}</span>}
       </div>
       <ul className="space-y-3">
         {notes.map((n) => (

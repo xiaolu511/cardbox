@@ -495,7 +495,7 @@ export default function CardsPage({ active = true }) {
         </div>
 
         {groups.length === 0 && !err && (
-          <div className="h-[calc(100vh-320px)] flex flex-col items-center justify-center text-muted animate-page">
+          <div className="h-[calc(100vh-320px)] flex flex-col items-center justify-center text-muted fade-in">
             <svg className="w-16 h-16 mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
             <p className="text-lg font-medium">{q && isAll ? t('没有搜到相关卡片') : t('这个分类下还没有卡片')}</p>
           </div>
