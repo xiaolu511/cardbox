@@ -281,7 +281,7 @@ export default function CardsPage({ active = true }) {
           </button>
         </div>
         {catErr && !newCatOpen && !manageCat && <p className="text-red-500 text-sm">{catErr}</p>}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
           <button
             type="button"
             onClick={() => { setActiveCat({ id: 'all', name: t('全部') }); setTab('cards'); }}

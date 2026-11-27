@@ -232,7 +232,7 @@ export default function ReviewPage({ active }) {
 
     return (
       <>
-      <div className="max-w-4xl mx-auto animate-page">
+      <div className="max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl mx-auto animate-page">
         <h2 className="text-2xl font-bold text-main mb-6">{t('复习中心')}</h2>
         
         {/* 数据面板 */}
@@ -407,7 +407,7 @@ export default function ReviewPage({ active }) {
   if (view === 'summary') {
     const currentDetails = detailGrade ? session.details.filter(d => d.grade === detailGrade) : [];
     return (
-      <div className="max-w-3xl mx-auto h-[calc(100vh-120px)] flex flex-col items-center justify-center animate-page relative">
+      <div className="max-w-3xl lg:max-w-4xl xl:max-w-5xl mx-auto h-[calc(100vh-120px)] flex flex-col items-center justify-center animate-page relative">
         {/* ... (保持原样) ... */}
         <div className="w-24 h-24 rounded-full bg-green-500/10 flex items-center justify-center mb-6 shadow-inner">
           <svg className="w-12 h-12 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
@@ -456,7 +456,7 @@ export default function ReviewPage({ active }) {
   // ================= 视图 2：复习进行中 =================
   const progress = (idx / queue.length) * 100;
   return (
-    <div className="max-w-3xl mx-auto space-y-5 animate-page">
+    <div className="max-w-3xl lg:max-w-4xl xl:max-w-5xl mx-auto space-y-5 animate-page">
       {/* ... (保持原样) ... */}
       <div className="flex items-center justify-between">
         <button onClick={() => setView('home')} className="text-sm text-muted hover:text-main flex items-center gap-1 transition-colors">

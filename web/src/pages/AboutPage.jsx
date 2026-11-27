@@ -36,7 +36,7 @@ export default function AboutPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto animate-page">
+    <div className="max-w-3xl lg:max-w-4xl xl:max-w-5xl mx-auto animate-page">
       <div className="bg-card rounded-2xl shadow-sm border border-app overflow-hidden transition-colors duration-300">
         
         {/* 头部横幅区 */}

@@ -173,19 +173,19 @@ export default function App() {
                // 页面常驻（hidden 切换）避免每次切页重挂重拉；但要给页面 active，
                // 让它们在被切回来时自己刷新一次，否则在笔记页拆完卡、切到卡片页看不到新卡
                <>
-                 <div className={tab === 'notes' ? 'block animate-page max-w-4xl mx-auto' : 'hidden'}>
+                 <div className={tab === 'notes' ? 'block animate-page max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl mx-auto' : 'hidden'}>
                    <NotesPage active={tab === 'notes'} />
                  </div>
-                 <div className={tab === 'cards' ? 'block animate-page max-w-4xl mx-auto' : 'hidden'}>
+                 <div className={tab === 'cards' ? 'block animate-page max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl mx-auto' : 'hidden'}>
                    <CardsPage active={tab === 'cards'} />
                  </div>
-                 <div className={tab === 'review' ? 'block animate-page max-w-4xl mx-auto' : 'hidden'}>
+                 <div className={tab === 'review' ? 'block animate-page max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl mx-auto' : 'hidden'}>
                    <ReviewPage active={tab === 'review'} />
                  </div>
-                 <div className={tab === 'settings' ? 'block animate-page max-w-4xl mx-auto' : 'hidden'}>
+                 <div className={tab === 'settings' ? 'block animate-page max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl mx-auto' : 'hidden'}>
                    <SettingsPage active={tab === 'settings'} />
                  </div>
-                 <div className={tab === 'about' ? 'block animate-page max-w-4xl mx-auto' : 'hidden'}>
+                 <div className={tab === 'about' ? 'block animate-page max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl mx-auto' : 'hidden'}>
                    <AboutPage />
                  </div>
                </>
