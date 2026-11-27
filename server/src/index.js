@@ -437,13 +437,17 @@ app.post('/api/categories', { preHandler: auth }, async (req, reply) => {
 app.delete('/api/categories/:id', { preHandler: auth }, async (req, reply) => {
   const cat = db.prepare('SELECT id FROM categories WHERE id = ? AND user_id = ?').get(req.params.id, req.user.uid);
   if (!cat) return reply.code(404).send({ error: '分类不存在' });
-  // 分类里的笔记先挪到「未分类」，别让它们凭空消失
-  const fallback = ensureCategory(req.user.uid, '未分类');
-  if (fallback !== cat.id) {
-    db.prepare('UPDATE notes SET category_id = ? WHERE category_id = ?').run(fallback, cat.id);
+  const { n } = db.prepare('SELECT count(*) AS n FROM notes WHERE category_id = ?').get(cat.id);
+  // 空分类直接删，别凭空造出一个「未分类」
+  if (!n) {
+    db.prepare('DELETE FROM categories WHERE id = ?').run(cat.id);
+    return { ok: true, moved: 0, movedTo: null };
   }
+  // 分类里还有笔记，先挪到「未分类」，别让它们凭空消失
+  const fallback = ensureCategory(req.user.uid, '未分类');
+  db.prepare('UPDATE notes SET category_id = ? WHERE category_id = ?').run(fallback, cat.id);
   db.prepare('DELETE FROM categories WHERE id = ?').run(cat.id);
-  return { ok: true, movedTo: fallback };
+  return { ok: true, moved: n, movedTo: fallback };
 });
 
 app.patch('/api/notes/:id/category', { preHandler: auth }, async (req, reply) => {

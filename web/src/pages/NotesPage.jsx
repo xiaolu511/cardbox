@@ -39,6 +39,7 @@ export default function NotesPage({ active = true }) {
   const [text, setText] = useState('');
   const [notes, setNotes] = useState([]);
   const [err, setErr] = useState('');
+  const [analysisErr, setAnalysisErr] = useState('');
   const [busyId, setBusyId] = useState(null);
   // 拆卡前先问张数；null = 没在选择。ids 可能是一条，也可能是批量选中的多条。
   const [splitTarget, setSplitTarget] = useState(null);
@@ -162,18 +163,19 @@ export default function NotesPage({ active = true }) {
 
   async function runAnalysis(ids) {
     if (!catChoice) {
-      setErr(t('请选择一个分类（也可以新建一个）。'));
+      setAnalysisErr(t('请选择一个分类（也可以新建一个）。'));
       return;
     }
     if (catChoice === 'new' && !newCatName.trim()) {
-      setErr(t('请先给新分类起个名字，或选择一个已有分类。'));
+      setAnalysisErr(t('请先给新分类起个名字，或选择一个已有分类。'));
       return;
     }
     if (hasKey === false) {
-      setErr(t('还没有配置 API Key，先去「设置」填上再拆卡。'));
+      setAnalysisErr(t('还没有配置 API Key，先去「设置」填上再拆卡。'));
       return;
     }
     const list = Array.isArray(ids) ? ids : [ids];
+    setAnalysisErr('');
     setErr('');
     setProgress({ open: true, step: 0, idx: 1, total: list.length, category: '', error: '', done: false, result: null });
     let cards = 0, todos = 0, importants = 0;
@@ -443,8 +445,13 @@ export default function NotesPage({ active = true }) {
                 )}
               </div>
             </div>
+            {analysisErr && (
+              <div className="px-5 pb-1">
+                <p className="text-sm text-red-500">{analysisErr}</p>
+              </div>
+            )}
             <div className="px-5 py-4 border-t border-app flex justify-end gap-3">
-              <button type="button" onClick={() => setSplitTarget(null)} className="px-4 py-2 rounded-lg text-muted hover-item transition-colors">{t('取消')}</button>
+              <button type="button" onClick={() => { setSplitTarget(null); setAnalysisErr(''); }} className="px-4 py-2 rounded-lg text-muted hover-item transition-colors">{t('取消')}</button>
               <button
                 type="button"
                 onClick={() => runAnalysis(splitTarget.ids)}

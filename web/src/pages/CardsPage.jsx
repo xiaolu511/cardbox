@@ -271,7 +271,7 @@ export default function CardsPage({ active = true }) {
             {t('新建分类')}
           </button>
         </div>
-        {catErr && <p className="text-red-500 text-sm">{catErr}</p>}
+        {catErr && !newCatOpen && !manageCat && <p className="text-red-500 text-sm">{catErr}</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <button
             type="button"
@@ -341,6 +341,7 @@ export default function CardsPage({ active = true }) {
                   placeholder={t('例如：考研英语')}
                   className="w-full border border-app bg-transparent text-main p-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                 />
+                {catErr && <p className="mt-2 text-sm text-red-500">{catErr}</p>}
               </div>
               <div className="px-5 py-3 flex justify-end gap-2 border-t border-app">
                 <button type="button" onClick={() => setNewCatOpen(false)} className="px-4 py-1.5 text-sm text-muted hover:text-main">{t('取消')}</button>
@@ -367,6 +368,7 @@ export default function CardsPage({ active = true }) {
               </div>
 
               <div className="flex-1 overflow-y-auto p-5 space-y-6">
+                {catErr && <p className="text-sm text-red-500">{catErr}</p>}
                 <section className="space-y-2">
                   <h4 className="text-sm font-medium text-main">{t('本分类已有 {n} 条', { n: manageOwn.length })}</h4>
                   {manageOwn.length === 0 && <p className="text-sm text-muted">{t('这个分类里还没有笔记')}</p>}
