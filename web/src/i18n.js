@@ -261,7 +261,7 @@ const TW = {
   '创建': '建立',
   '⚠️ 确定删除这条笔记吗？它的卡片和待办也会一起删除。': '⚠️ 確定刪除這條筆記嗎？它的卡片和待辦也會一併刪除。',
   '删除分类': '刪除分類',
-  '⚠️ 确定删除分类「{name}」吗？里面的内容会移到未分类。': '⚠️ 確定刪除分類「{name}」嗎？裡面的內容會移到未分類。',
+  '⚠️ 确定删除分类「{name}」吗？里面的内容会回到「全部」，不会被删除。': '⚠️ 確定刪除分類「{name}」嗎？裡面的內容會回到「全部」，不會被刪除。',
 };
 
 const EN = {
@@ -501,7 +501,7 @@ const EN = {
   '创建': 'Create',
   '⚠️ 确定删除这条笔记吗？它的卡片和待办也会一起删除。': '⚠️ Delete this note? Its cards and todos will be deleted too.',
   '删除分类': 'Delete category',
-  '⚠️ 确定删除分类「{name}」吗？里面的内容会移到未分类。': 'Delete category "{name}"? Its items will move to Uncategorized.',
+  '⚠️ 确定删除分类「{name}」吗？里面的内容会回到「全部」，不会被删除。': 'Delete category "{name}"? Its items go back to All and are not deleted.',
 };
 
 const DICTS = { zhCN: null, zhTW: TW, en: EN };

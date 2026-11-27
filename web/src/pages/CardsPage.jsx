@@ -317,7 +317,7 @@ export default function CardsPage({ active = true }) {
               title={t('删除分类')}
               onClick={async (e) => {
                 e.stopPropagation();
-                if (!confirm(t('⚠️ 确定删除分类「{name}」吗？里面的内容会移到未分类。', { name: c.name }))) return;
+                if (!confirm(t('⚠️ 确定删除分类「{name}」吗？里面的内容会回到「全部」，不会被删除。', { name: c.name }))) return;
                 try {
                   await api('/api/categories/' + c.id, { method: 'DELETE' });
                   await loadCats();
