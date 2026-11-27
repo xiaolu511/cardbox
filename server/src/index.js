@@ -335,7 +335,8 @@ app.post('/api/notes/:id/apply', { preHandler: auth }, async (req, reply) => {
     if (!own) return reply.code(400).send({ error: '分类不存在' });
     categoryId = own.id;
   } else {
-    categoryId = pickCategory(req.user.uid, body.categoryName || data.category);
+    // 分类只能由用户指定；没传就落到「未分类」，不再采用 AI 建议的归类
+  categoryId = pickCategory(req.user.uid, body.categoryName) || ensureCategory(req.user.uid, '未分类');
   }
 
   const tx = db.transaction(() => {
