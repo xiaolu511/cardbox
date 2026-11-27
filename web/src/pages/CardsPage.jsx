@@ -299,7 +299,7 @@ export default function CardsPage({ active = true }) {
   );
 
   const rail = (
-    <aside className="w-52 shrink-0 space-y-1 hidden md:block sticky top-0 self-start">
+    <aside className="w-52 shrink-0 space-y-1 hidden md:block sticky top-0 self-start bg-card border border-app rounded-2xl p-3 shadow-sm">
           <div className="pb-2">{viewSwitch}</div>
           <button
         type="button"
@@ -353,7 +353,7 @@ export default function CardsPage({ active = true }) {
       <div className={`space-y-4 ${viewCls || 'animate-detail'}`}>
         <div className="flex gap-6 items-start">
           {rail}
-          <div className="flex-1 min-w-0">
+          <div key={activeCat.id} className={`flex-1 min-w-0 ${catCls}`}>
             <ReviewPage active={active} categoryId={activeCat.id} />
           </div>
         </div>

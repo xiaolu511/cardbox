@@ -102,16 +102,16 @@ body, #root {
 }
 
 /* 切换动画：横向/纵向各两个方向，平移 + 淡入 */
-@keyframes switchXF { from { opacity: 0; transform: translateX(16px) } to { opacity: 1; transform: translateX(0) } }
-@keyframes switchXB { from { opacity: 0; transform: translateX(-16px) } to { opacity: 1; transform: translateX(0) } }
-@keyframes switchYF { from { opacity: 0; transform: translateY(12px) } to { opacity: 1; transform: translateY(0) } }
-@keyframes switchYB { from { opacity: 0; transform: translateY(-12px) } to { opacity: 1; transform: translateY(0) } }
-.switch-x-f { animation: switchXF 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-.switch-x-b { animation: switchXB 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-.switch-y-f { animation: switchYF 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-.switch-y-b { animation: switchYB 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-.dir-x-f .animate-page { animation-name: switchXF; animation-duration: 0.3s; }
-.dir-x-b .animate-page { animation-name: switchXB; animation-duration: 0.3s; }
+@keyframes switchXF { from { opacity: 0; transform: translateX(24px) } to { opacity: 1; transform: translateX(0) } }
+@keyframes switchXB { from { opacity: 0; transform: translateX(-24px) } to { opacity: 1; transform: translateX(0) } }
+@keyframes switchYF { from { opacity: 0; transform: translateY(18px) } to { opacity: 1; transform: translateY(0) } }
+@keyframes switchYB { from { opacity: 0; transform: translateY(-18px) } to { opacity: 1; transform: translateY(0) } }
+.switch-x-f { animation: switchXF 0.44s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.switch-x-b { animation: switchXB 0.44s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.switch-y-f { animation: switchYF 0.44s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.switch-y-b { animation: switchYB 0.44s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.dir-x-f .animate-page { animation-name: switchXF; animation-duration: 0.4s; }
+.dir-x-b .animate-page { animation-name: switchXB; animation-duration: 0.4s; }
 
 /* 小元素（提示、空态、浮层）只淡入，不做位移 */
 @keyframes fadeIn {
@@ -124,7 +124,7 @@ body, #root {
 
 /* 点开分类：内容从右侧轻轻推进来 */
 @keyframes detailIn {
-  from { opacity: 0; transform: translateX(16px) scale(0.995); }
+  from { opacity: 0; transform: translateX(24px) scale(0.995); }
   to { opacity: 1; transform: translateX(0) scale(1); }
 }
 .animate-detail {

@@ -86,7 +86,7 @@ export default function SettingsPage({ active = true }) {
   return (
     <div className="space-y-6 pb-20">
       <div className="flex gap-8 items-start">
-        <aside className="w-44 shrink-0 space-y-1 hidden md:block sticky top-0 self-start">
+        <aside className="w-44 shrink-0 space-y-1 hidden md:block sticky top-0 self-start bg-card border border-app rounded-2xl p-3 shadow-sm">
           {[
             { id: 'ai', label: t('AI 设置') },
             { id: 'personal', label: t('个性化设置') },
