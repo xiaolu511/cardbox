@@ -101,7 +101,7 @@ export default function SettingsPage({ active = true }) {
             >{o.label}</button>
           ))}
         </aside>
-        <div className="flex-1 min-w-0 space-y-6 min-h-[520px]">
+        <div className="flex-1 min-w-0 space-y-6 min-h-[520px] bg-card border border-app rounded-2xl shadow-sm p-5">
 
       {/* AI 引擎 */}
       <div className={`bg-card rounded-xl shadow-sm border border-app overflow-hidden ${sec === 'ai' ? '' : 'hidden'} ${secCls}`}>

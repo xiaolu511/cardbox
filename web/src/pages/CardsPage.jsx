@@ -303,6 +303,8 @@ export default function CardsPage({ active = true }) {
     </div>
   );
 
+  // 三层结构：背景 / 左栏面板 / 主体面板
+  const panel = 'bg-card border border-app rounded-2xl shadow-sm p-5';
   const rail = (
     <aside className="w-52 shrink-0 space-y-1 hidden md:block sticky top-0 self-start bg-card border border-app rounded-2xl p-3 shadow-sm">
           <div className="pb-2">{viewSwitch}</div>
@@ -358,7 +360,7 @@ export default function CardsPage({ active = true }) {
       <div className={`space-y-4 ${viewCls || 'animate-detail'}`}>
         <div className="flex gap-6 items-start">
           {!focus && rail}
-          <div key={activeCat.id} className={`flex-1 min-w-0 ${catCls}`}>
+          <div key={activeCat.id} className={`flex-1 min-w-0 ${panel} ${catCls}`}>
             <ReviewPage active={active} categoryId={activeCat.id} />
           </div>
         </div>
@@ -375,12 +377,12 @@ export default function CardsPage({ active = true }) {
     <div className={`space-y-4 ${viewCls || 'animate-detail'}`}>
       <div className="flex gap-6 items-start">
         {!focus && rail}
-        <div key={activeCat.id} className={`flex-1 min-w-0 space-y-4 ${catCls}`}>
+        <div key={activeCat.id} className={`flex-1 min-w-0 space-y-4 ${panel} ${catCls}`}>
       <div className="flex items-center gap-3">
         <h2 className="font-bold text-main">{activeCat.id === 'all' ? t('全部') : activeCat.name}</h2>
       </div>
 
-      <div className="space-y-6 bg-card p-6 rounded-2xl shadow-sm border border-app transition-colors duration-300 min-h-[520px]">
+      <div className="space-y-6 min-h-[520px]">
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
