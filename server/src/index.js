@@ -5,6 +5,7 @@ import rateLimit from '@fastify/rate-limit';
 import { z } from 'zod';
 import { db } from './db.js';
 import { hashPassword, verifyPassword } from './auth.js';
+import { analyzeNote } from './analyze.js';
 import { splitToCards, answerQuestion, extractOutline, judgeAnswer, refineText } from './llm.js';
 import { extractText } from './extract.js';
 import multipart from '@fastify/multipart';
@@ -272,6 +273,168 @@ app.post('/api/refine', { preHandler: auth }, async (req, reply) => {
   } catch (e) {
     return reply.code(502).send({ error: `精简失败: ${e.message}` });
   }
+});
+
+
+// ========== 笔记分析：知识 / 待办 / 重要事项 ==========
+const ANALYSIS_LIMIT = { cards: 20, todos: 20, important: 20 };
+
+async function userKey(userId) {
+  const row = db.prepare('SELECT api_key FROM users WHERE id = ?').get(userId);
+  return row && row.api_key ? row.api_key : '';
+}
+
+function pickCategory(userId, name) {
+  const trimmed = String(name || '').trim().slice(0, 40);
+  if (!trimmed) return null;
+  const found = db.prepare('SELECT id FROM categories WHERE user_id = ? AND name = ?').get(userId, trimmed);
+  if (found) return found.id;
+  const info = db.prepare('INSERT INTO categories (user_id, name) VALUES (?, ?)').run(userId, trimmed);
+  return Number(info.lastInsertRowid);
+}
+
+app.post('/api/notes/:id/analyze', { preHandler: auth }, async (req, reply) => {
+  const note = db.prepare('SELECT id, raw_text FROM notes WHERE id = ? AND user_id = ?').get(req.params.id, req.user.uid);
+  if (!note) return reply.code(404).send({ error: '笔记不存在' });
+  const instruction = String(req.body && req.body.instruction || '').slice(0, 500);
+  const thinking = ['fast', 'standard', 'deep'].includes(req.body && req.body.thinking) ? req.body.thinking : 'standard';
+  const lang = ['zhCN', 'zhTW', 'en'].includes(req.body && req.body.lang) ? req.body.lang : 'zhCN';
+  try {
+    const key = await userKey(req.user.uid);
+    const result = await analyzeNote(note.raw_text, key, { lang, instruction, thinking });
+    return {
+      summary: result.summary,
+      category: result.category || '',
+      cards: result.cards.slice(0, ANALYSIS_LIMIT.cards),
+      todos: result.todos.slice(0, ANALYSIS_LIMIT.todos),
+      important: result.important.slice(0, ANALYSIS_LIMIT.important),
+      mock: !!result.mock,
+    };
+  } catch (e) {
+    req.log.error(e, 'analyze failed');
+    return reply.code(502).send({ error: '分析失败：' + e.message });
+  }
+});
+
+app.post('/api/notes/:id/apply', { preHandler: auth }, async (req, reply) => {
+  const note = db.prepare('SELECT id FROM notes WHERE id = ? AND user_id = ?').get(req.params.id, req.user.uid);
+  if (!note) return reply.code(404).send({ error: '笔记不存在' });
+  const body = req.body || {};
+  const data = body.analysis || {};
+  let categoryId = null;
+  if (body.categoryId) {
+    const own = db.prepare('SELECT id FROM categories WHERE id = ? AND user_id = ?').get(body.categoryId, req.user.uid);
+    if (!own) return reply.code(400).send({ error: '分类不存在' });
+    categoryId = own.id;
+  } else {
+    categoryId = pickCategory(req.user.uid, body.categoryName || data.category);
+  }
+
+  const tx = db.transaction(() => {
+    let cards = 0, todos = 0, important = 0;
+    const insCard = db.prepare('INSERT OR IGNORE INTO cards (note_id, question, answer, tags) VALUES (?, ?, ?, ?)');
+    const insTodo = db.prepare('INSERT INTO todos (user_id, note_id, title, due_at) VALUES (?, ?, ?, ?)');
+    const insImp = db.prepare('INSERT INTO important_items (user_id, note_id, title, detail) VALUES (?, ?, ?, ?)');
+    for (const c of (data.cards || [])) {
+      const q = String(c.question || '').trim().slice(0, 500);
+      const a = String(c.answer || '').trim().slice(0, 5000);
+      if (!q || !a) continue;
+      const info = insCard.run(note.id, q, a, JSON.stringify(Array.isArray(c.tags) ? c.tags.slice(0, 6) : []));
+      if (info.changes) cards += 1;
+    }
+    for (const t of (data.todos || [])) {
+      const title = String(t.title || '').trim().slice(0, 200);
+      if (!title) continue;
+      insTodo.run(req.user.uid, note.id, title, t.due_at ? String(t.due_at).slice(0, 19) : null);
+      todos += 1;
+    }
+    for (const it of (data.important || [])) {
+      const title = String(it.title || '').trim().slice(0, 200);
+      if (!title) continue;
+      insImp.run(req.user.uid, note.id, title, String(it.detail || '').slice(0, 1000));
+      important += 1;
+    }
+    if (categoryId) db.prepare('UPDATE notes SET category_id = ? WHERE id = ?').run(categoryId, note.id);
+    return { cards, todos, important, categoryId };
+  });
+  const created = tx();
+  return { ok: true, created, summary: String(data.summary || '').slice(0, 300) };
+});
+
+app.get('/api/categories', { preHandler: auth }, async (req) => {
+  const rows = db.prepare([
+    'SELECT c.id, c.name, c.created_at,',
+    '  (SELECT COUNT(*) FROM notes n WHERE n.category_id = c.id) AS noteCount,',
+    '  (SELECT COUNT(*) FROM cards k JOIN notes n ON n.id = k.note_id WHERE n.category_id = c.id) AS cardCount,',
+    '  (SELECT COUNT(*) FROM todos t WHERE t.user_id = c.user_id AND t.note_id IN (SELECT id FROM notes WHERE category_id = c.id)) AS todoCount,',
+    '  (SELECT COUNT(*) FROM important_items i WHERE i.user_id = c.user_id AND i.note_id IN (SELECT id FROM notes WHERE category_id = c.id)) AS importantCount',
+    'FROM categories c WHERE c.user_id = ? ORDER BY c.name',
+  ].join(' ')).all(req.user.uid);
+  return rows;
+});
+
+app.post('/api/categories', { preHandler: auth }, async (req, reply) => {
+  const name = String(req.body && req.body.name || '').trim().slice(0, 40);
+  if (!name) return reply.code(400).send({ error: '分类名不能为空' });
+  const exists = db.prepare('SELECT id FROM categories WHERE user_id = ? AND name = ?').get(req.user.uid, name);
+  if (exists) return reply.code(409).send({ error: '已经有这个分类了' });
+  const info = db.prepare('INSERT INTO categories (user_id, name) VALUES (?, ?)').run(req.user.uid, name);
+  return { id: Number(info.lastInsertRowid), name };
+});
+
+app.delete('/api/categories/:id', { preHandler: auth }, async (req, reply) => {
+  const info = db.prepare('DELETE FROM categories WHERE id = ? AND user_id = ?').run(req.params.id, req.user.uid);
+  if (!info.changes) return reply.code(404).send({ error: '分类不存在' });
+  return { ok: true };
+});
+
+app.patch('/api/notes/:id/category', { preHandler: auth }, async (req, reply) => {
+  const note = db.prepare('SELECT id FROM notes WHERE id = ? AND user_id = ?').get(req.params.id, req.user.uid);
+  if (!note) return reply.code(404).send({ error: '笔记不存在' });
+  const raw = req.body ? req.body.categoryId : null;
+  if (raw === null || raw === undefined || raw === '') {
+    db.prepare('UPDATE notes SET category_id = NULL WHERE id = ?').run(note.id);
+    return { ok: true, categoryId: null };
+  }
+  const own = db.prepare('SELECT id FROM categories WHERE id = ? AND user_id = ?').get(raw, req.user.uid);
+  if (!own) return reply.code(400).send({ error: '分类不存在' });
+  db.prepare('UPDATE notes SET category_id = ? WHERE id = ?').run(own.id, note.id);
+  return { ok: true, categoryId: own.id };
+});
+
+app.get('/api/categories/:id/overview', { preHandler: auth }, async (req, reply) => {
+  const cat = req.params.id === 'all' ? { id: null, name: '全部' } : db.prepare('SELECT id, name FROM categories WHERE id = ? AND user_id = ?').get(req.params.id, req.user.uid);
+  if (!cat) return reply.code(404).send({ error: '分类不存在' });
+  const scope = req.params.id === 'all' ? '' : ' AND n.category_id = ' + Number(cat.id);
+  const cards = db.prepare('SELECT k.id, k.question, k.answer, k.tags, k.next_review, n.id AS note_id, n.raw_text FROM cards k JOIN notes n ON n.id = k.note_id WHERE n.user_id = ?' + scope + ' ORDER BY k.id DESC LIMIT 200').all(req.user.uid);
+  const todos = db.prepare('SELECT t.id, t.title, t.due_at, t.remind_before, t.status, t.note_id FROM todos t JOIN notes n ON n.id = t.note_id WHERE n.user_id = ?' + scope + " ORDER BY CASE WHEN t.status = 'open' THEN 0 ELSE 1 END, COALESCE(t.due_at, '9999'), t.id DESC LIMIT 200").all(req.user.uid);
+  const important = db.prepare('SELECT i.id, i.title, i.detail, i.note_id FROM important_items i JOIN notes n ON n.id = i.note_id WHERE n.user_id = ?' + scope + ' ORDER BY i.id DESC LIMIT 200').all(req.user.uid);
+  const notes = db.prepare('SELECT n.id, n.raw_text, n.created_at FROM notes n WHERE n.user_id = ?' + scope + ' ORDER BY n.id DESC LIMIT 200').all(req.user.uid);
+  return { category: cat, cards, todos, important, notes };
+});
+
+app.patch('/api/todos/:id', { preHandler: auth }, async (req, reply) => {
+  const row = db.prepare('SELECT id FROM todos WHERE id = ? AND user_id = ?').get(req.params.id, req.user.uid);
+  if (!row) return reply.code(404).send({ error: '待办不存在' });
+  const b = req.body || {};
+  if (b.status !== undefined) {
+    const st = b.status === 'done' ? 'done' : 'open';
+    db.prepare('UPDATE todos SET status = ? WHERE id = ?').run(st, row.id);
+  }
+  if (b.due_at !== undefined) {
+    db.prepare('UPDATE todos SET due_at = ? WHERE id = ?').run(b.due_at ? String(b.due_at).slice(0, 19) : null, row.id);
+  }
+  if (b.remind_before !== undefined) {
+    const m = Math.max(0, Math.min(60 * 24 * 7, Number(b.remind_before) || 0));
+    db.prepare('UPDATE todos SET remind_before = ? WHERE id = ?').run(m, row.id);
+  }
+  return db.prepare('SELECT * FROM todos WHERE id = ?').get(row.id);
+});
+
+app.get('/api/agenda', { preHandler: auth }, async (req) => {
+  const todos = db.prepare("SELECT id, title, due_at, remind_before, status FROM todos WHERE user_id = ? AND status = 'open' ORDER BY COALESCE(due_at, '9999') LIMIT 200").all(req.user.uid);
+  const important = db.prepare('SELECT id, title, detail FROM important_items WHERE user_id = ? ORDER BY id DESC LIMIT 50').all(req.user.uid);
+  return { todos, important };
 });
 
 // ========== 学习数据看板 ==========

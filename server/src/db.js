@@ -51,6 +51,36 @@ CREATE TABLE IF NOT EXISTS review_log (
 );
 CREATE INDEX IF NOT EXISTS idx_review_log_card ON review_log(card_id, graded_at);
 CREATE INDEX IF NOT EXISTS idx_review_log_time ON review_log(graded_at);
+-- 笔记分类（用户自建，也可由 AI 归类时自动创建）
+CREATE TABLE IF NOT EXISTS categories (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE(user_id, name)
+);
+CREATE TABLE IF NOT EXISTS todos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  note_id INTEGER REFERENCES notes(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  due_at TEXT,
+  remind_before INTEGER NOT NULL DEFAULT 30,
+  status TEXT NOT NULL DEFAULT 'open',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE TABLE IF NOT EXISTS important_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  note_id INTEGER REFERENCES notes(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  detail TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_categories_user ON categories(user_id);
+CREATE INDEX IF NOT EXISTS idx_todos_user ON todos(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_todos_due ON todos(due_at);
+CREATE INDEX IF NOT EXISTS idx_important_user ON important_items(user_id);
 `);
 
 // 老库迁移：补 username 列（注册/登录已改用用户名）
@@ -95,6 +125,17 @@ const addUsernameColumn = () => {
 };
 
 addUsernameColumn();
+
+// 老库迁移：给笔记补分类列
+const addNoteCategoryColumn = () => {
+  const cols = db.prepare('PRAGMA table_info(notes)').all().map((c) => c.name);
+  if (!cols.includes('category_id')) {
+    db.exec('ALTER TABLE notes ADD COLUMN category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL');
+  }
+  db.exec('CREATE INDEX IF NOT EXISTS idx_notes_category ON notes(category_id)');
+};
+
+addNoteCategoryColumn();
 
 
 // 2. 修复重复拆卡：给 (note_id, question) 加唯一索引

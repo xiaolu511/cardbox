@@ -42,7 +42,8 @@ export default function NotesPage({ active = true }) {
   const [busyId, setBusyId] = useState(null);
   // 拆卡前先问张数；null = 没在选择。ids 可能是一条，也可能是批量选中的多条。
   const [splitTarget, setSplitTarget] = useState(null);
-  const [splitCount, setSplitCount] = useState(3);
+  const [analysisForm, setAnalysisForm] = useState({ instruction: '', thinking: 'standard' });
+  const [progress, setProgress] = useState({ open: false, step: 0, idx: 0, total: 1, category: '', error: '', done: false, result: null });
   const [useRefine, setUseRefine] = useState(false); // 保存前先让 AI 精简一遍
   const [refining, setRefining] = useState(false);
   const [importMsg, setImportMsg] = useState('');
@@ -135,23 +136,46 @@ export default function NotesPage({ active = true }) {
     }
   }
 
-  async function split(ids, count) {
-    setErr('');
+  async function runAnalysis(ids) {
     const list = Array.isArray(ids) ? ids : [ids];
-    setBusyId(list.length === 1 ? list[0] : 'batch');
-    let ok = 0;
+    setErr('');
+    setProgress({ open: true, step: 0, idx: 1, total: list.length, category: '', error: '', done: false, result: null });
+    let cards = 0;
     try {
-      for (const id of list) {
+      for (let i = 0; i < list.length; i++) {
+        const id = list[i];
+        setProgress((p) => ({ ...p, idx: i + 1, step: 0, error: '', category: '' }));
+        await new Promise((r) => setTimeout(r, 240));
+        setProgress((p) => ({ ...p, step: 1 }));
+        let analysis;
         try {
-          const r = await api(`/api/notes/${id}/cards`, { method: 'POST', body: { lang: getLang(), count } });
-          ok += r.created || 0;
-        } catch (e) { setErr(e.message); }
+          analysis = await api(`/api/notes/${id}/analyze`, {
+            method: 'POST',
+            body: { lang: getLang(), instruction: analysisForm.instruction, thinking: analysisForm.thinking },
+          });
+        } catch (e) {
+          setProgress((p) => ({ ...p, error: e.message }));
+          return;
+        }
+        setProgress((p) => ({ ...p, step: 2, category: analysis.category || '' }));
+        await new Promise((r) => setTimeout(r, 700));
+        setProgress((p) => ({ ...p, step: 3 }));
+        try {
+          const r = await api(`/api/notes/${id}/apply`, {
+            method: 'POST',
+            body: { analysis: { cards: analysis.cards || [], summary: analysis.summary || '' } },
+          });
+          cards += (r.created && r.created.cards) || 0;
+        } catch (e) {
+          setProgress((p) => ({ ...p, error: e.message }));
+          return;
+        }
+        setProgress((p) => ({ ...p, step: 4 }));
       }
-      if (ok > 0) alert(t('🎉 成功拆出 {n} 张卡片！', { n: ok }));
-    } finally {
-      setBusyId(null);
-      setSplitTarget(null);
+      setProgress((p) => ({ ...p, done: true, result: { cards } }));
       await load(true);
+    } finally {
+      setSplitTarget(null);
     }
   }
 
@@ -232,7 +256,7 @@ export default function NotesPage({ active = true }) {
               className="px-3 py-2 rounded-lg text-sm text-primary-600 hover:underline disabled:opacity-40"
             >{allSelected ? t('取消全选') : t('全选')}</button>
             <button
-              onClick={() => { if (sel.size) { setSplitCount(3); setSplitTarget({ ids: [...sel] }); } }}
+              onClick={() => { if (sel.size) { setAnalysisForm({ instruction: '', thinking: 'standard' }); setSplitTarget({ ids: [...sel] }); } }}
               disabled={sel.size === 0 || batchBusy}
               className="px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors disabled:opacity-40"
             >{t('批量拆卡')}</button>
@@ -285,7 +309,7 @@ export default function NotesPage({ active = true }) {
                   <div className="ml-auto flex gap-4">
                     <button onClick={(e) => { e.stopPropagation(); del(n.id); }} className="text-muted hover:text-red-500 transition-colors">{t('删除')}</button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); setSplitCount(3); setSplitTarget({ ids: [n.id] }); }}
+                      onClick={(e) => { e.stopPropagation(); setAnalysisForm({ instruction: '', thinking: 'standard' }); setSplitTarget({ ids: [n.id] }); }}
                       disabled={busyId === n.id || busyId === 'batch'}
                       className="text-primary-600 font-medium hover:underline disabled:opacity-50"
                     >
@@ -301,42 +325,110 @@ export default function NotesPage({ active = true }) {
 
       {splitTarget && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6">
-          <div className="w-full max-w-sm bg-card border border-app rounded-2xl shadow-2xl overflow-hidden">
+          <div className="w-full max-w-md bg-card border border-app rounded-2xl shadow-2xl overflow-hidden">
             <div className="px-5 py-4 border-b border-app">
               <h3 className="font-bold text-main">
-                {splitTarget.ids.length > 1 ? t('批量拆卡') : t('拆成卡片')}
+                {splitTarget.ids.length > 1 ? t('批量分析') : t('拆成卡片')}
               </h3>
               <p className="text-xs text-muted mt-1 truncate">
                 {splitTarget.ids.length > 1
                   ? t('已选 {n} 条', { n: splitTarget.ids.length })
-                  : (notes.find(x => x.id === splitTarget.ids[0])?.raw_text || '')}
+                  : (notes.find((x) => x.id === splitTarget.ids[0])?.raw_text || '')}
+              </p>
+            </div>
+            <div className="px-5 py-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-main mb-1.5">{t('分析要求（可选）')}</label>
+                <textarea
+                  value={analysisForm.instruction}
+                  onChange={(e) => setAnalysisForm((f) => ({ ...f, instruction: e.target.value }))}
+                  rows={3}
+                  placeholder={t('例如：只考概念、忽略例子；或：重点标出时间地点')}
+                  className="w-full px-3 py-2 rounded-lg border border-app bg-app text-sm text-main resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-main mb-1.5">{t('思考程度')}</label>
+                <div className="flex gap-2">
+                  {[
+                    { key: 'fast', label: t('快速') },
+                    { key: 'standard', label: t('标准') },
+                    { key: 'deep', label: t('深入') },
+                  ].map((o) => (
+                    <button
+                      key={o.key}
+                      type="button"
+                      onClick={() => setAnalysisForm((f) => ({ ...f, thinking: o.key }))}
+                      className={`flex-1 px-3 py-2 rounded-lg text-sm border transition-colors ${analysisForm.thinking === o.key ? 'border-primary-500 bg-primary-600/10 text-primary-600 font-medium' : 'border-app text-muted hover:border-primary-500/50'}`}
+                    >{o.label}</button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted mt-1.5">{t('越深入，挖出的待办和重要事项越多，耗时也更长。')}</p>
+              </div>
+            </div>
+            <div className="px-5 py-4 border-t border-app flex justify-end gap-3">
+              <button type="button" onClick={() => setSplitTarget(null)} className="px-4 py-2 rounded-lg text-muted hover-item transition-colors">{t('取消')}</button>
+              <button
+                type="button"
+                onClick={() => runAnalysis(splitTarget.ids)}
+                disabled={busyId !== null}
+                className="px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors disabled:opacity-50"
+              >{t('开始分析')}</button>
+            </div>
+          </div>
+        </div>, document.body)}
+
+      {progress.open && createPortal(
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-6">
+          <div className="w-full max-w-sm bg-card border border-app rounded-2xl shadow-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-app">
+              <h3 className="font-bold text-main">{progress.done ? t('分析完成') : t('正在分析…')}</h3>
+              <p className="text-xs text-muted mt-1">
+                {t('第 {i} / {n} 条', { i: progress.idx, n: progress.total })}
               </p>
             </div>
             <div className="px-5 py-5 space-y-3">
-              <label className="block text-sm font-medium text-main">{t('想要几张卡片？')}</label>
-              <div className="flex items-center gap-2 flex-wrap">
-                {[3, 5, 8, 10].map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => setSplitCount(n)}
-                    className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${splitCount === n ? 'border-primary-500 bg-primary-600/10 text-primary-600 font-medium' : 'border-app text-muted hover:border-primary-500/50'}`}
-                  >{n}</button>
-                ))}
-                <input
-                  type="number" min="1" max="20" value={splitCount}
-                  onChange={(e) => setSplitCount(Math.min(Math.max(Number(e.target.value) || 0, 1), 20))}
-                  className="w-20 px-3 py-1.5 rounded-lg border border-app bg-app text-center text-sm"
-                />
-              </div>
-              <p className="text-xs text-muted">{t('AI 会尽量按这个数量拆，实际以内容为准。')}</p>
+              {[
+                { i: 1, label: t('读取内容') },
+                { i: 2, label: t('AI 分析') },
+                { i: 3, label: t('归类') },
+                { i: 4, label: t('写入卡片') },
+              ].map((st) => {
+                const active = progress.step === st.i - 1;
+                const done = progress.step >= st.i;
+                return (
+                  <div key={st.i} className="flex items-center gap-3">
+                    <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs border ${done ? 'bg-primary-600 border-primary-600 text-white' : active ? 'border-primary-500 text-primary-600' : 'border-app text-muted'}`}>
+                      {done ? '✓' : st.i}
+                    </span>
+                    <span className={`text-sm ${done || active ? 'text-main' : 'text-muted'}`}>{st.label}</span>
+                    {active && !progress.done && (
+                      <span className="ml-auto flex gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary-600 animate-bounce" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary-600 animate-bounce [animation-delay:120ms]" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary-600 animate-bounce [animation-delay:240ms]" />
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+              {progress.step === 2 && progress.category && (
+                <p className="text-xs text-muted pl-9">{t('识别到的分类：{name}', { name: progress.category })}</p>
+              )}
+              {progress.error && (
+                <p className="text-sm text-red-500 pl-9">{progress.error}</p>
+              )}
+              {progress.done && (
+                <p className="text-sm text-main pl-9">{t('生成 {n} 张卡片', { n: (progress.result && progress.result.cards) || 0 })}</p>
+              )}
             </div>
-            <div className="px-5 py-4 border-t border-app flex justify-end gap-3">
-              <button onClick={() => setSplitTarget(null)} className="px-4 py-2 rounded-lg text-muted hover-item transition-colors">{t('取消')}</button>
+            <div className="px-5 py-4 border-t border-app flex justify-end">
               <button
-                onClick={() => split(splitTarget.ids, splitCount)}
-                disabled={busyId !== null}
-                className="px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors disabled:opacity-50"
-              >{busyId !== null ? t('AI 拆卡中...') : t('开始拆卡')}</button>
+                type="button"
+                onClick={() => setProgress({ open: false, step: 0, idx: 0, total: 1, category: '', error: '', done: false, result: null })}
+                disabled={!progress.done && !progress.error}
+                className="px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors disabled:opacity-40"
+              >{progress.done ? t('完成') : t('关闭')}</button>
             </div>
           </div>
         </div>, document.body)}

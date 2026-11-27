@@ -201,6 +201,21 @@ const TW = {
   '保存前先精简': '儲存前先精簡',
   '正在精简...': '正在精簡...',
   '用你自己的话把要点写出来，再提交一次。': '用你自己的話把要點寫出來，再提交一次。',
+
+  '分析要求（可选）': '分析要求（可選）',
+  '例如：只考概念、忽略例子；或：重点标出时间地点': '例如：只考概念、忽略例子；或：重點標出時間地點',
+  '思考程度': '思考程度',
+  '越深入，挖出的待办和重要事项越多，耗时也更长。': '越深入，挖出的待辦與重要事項越多，耗時也更長。',
+  '开始分析': '開始分析',
+  '批量分析': '批次分析',
+  '正在分析…': '正在分析…',
+  '第 {i} / {n} 条': '第 {i} / {n} 條',
+  '读取内容': '讀取內容',
+  '归类': '歸類',
+  '写入卡片': '寫入卡片',
+  '分析完成': '分析完成',
+  '识别到的分类：{name}': '識別到的分類：{name}',
+  '生成 {n} 张卡片': '生成 {n} 張卡片',
 };
 
 const EN = {
@@ -380,6 +395,21 @@ const EN = {
   '保存前先精简': 'Condense before saving',
   '正在精简...': 'Condensing...',
   '用你自己的话把要点写出来，再提交一次。': 'Write the key points in your own words and submit again.',
+
+  '分析要求（可选）': 'Instructions (optional)',
+  '例如：只考概念、忽略例子；或：重点标出时间地点': 'e.g. only test concepts, skip examples; or highlight times and places',
+  '思考程度': 'Thinking effort',
+  '越深入，挖出的待办和重要事项越多，耗时也更长。': 'Deeper runs surface more todos and important items, and take longer.',
+  '开始分析': 'Start analysis',
+  '批量分析': 'Analyze selected',
+  '正在分析…': 'Analyzing…',
+  '第 {i} / {n} 条': 'Note {i} of {n}',
+  '读取内容': 'Reading content',
+  '归类': 'Categorizing',
+  '写入卡片': 'Saving cards',
+  '分析完成': 'Analysis complete',
+  '识别到的分类：{name}': 'Detected category: {name}',
+  '生成 {n} 张卡片': 'Created {n} cards',
 };
 
 const DICTS = { zhCN: null, zhTW: TW, en: EN };
