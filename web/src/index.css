@@ -72,15 +72,33 @@ body, #root {
   background-color: var(--custom-primary);
   border-radius: 0 4px 4px 0; /* 右侧带一点圆角 */
 }
+.tab-active {
+  background-color: var(--custom-primary-bg);
+  color: var(--custom-primary-text);
+  position: relative;
+}
+.tab-active::after {
+  content: '';
+  position: absolute;
+  left: 28%;
+  right: 28%;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 2px;
+  background-color: var(--custom-primary);
+  animation: tabUnderline 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes tabUnderline { from { transform: scaleX(0); opacity: 0.4 } to { transform: scaleX(1); opacity: 1 } }
+
 .drag-region { -webkit-app-region: drag; }
 .no-drag { -webkit-app-region: no-drag; }
 
 @keyframes pageFadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateX(14px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 .animate-page {
-  animation: pageFadeIn 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation: pageFadeIn 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
 /* 点开分类：内容从右侧轻轻推进来 */
@@ -104,7 +122,8 @@ body, #root {
 @media (prefers-reduced-motion: reduce) {
   .animate-page,
   .animate-detail,
-  .animate-list { animation: none; }
+  .animate-list,
+  .tab-active::after { animation: none; }
 }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }

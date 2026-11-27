@@ -10,7 +10,6 @@ import LoginPage from './pages/LoginPage';
 import NotesPage from './pages/NotesPage';
 import CardsPage from './pages/CardsPage';
 import SettingsPage from './pages/SettingsPage';
-import AboutPage from './pages/AboutPage';
 
 export default function App() {
   useI18n(); // 订阅语言变化，切换后整棵树重渲染
@@ -110,7 +109,6 @@ export default function App() {
     { id: 'notes', label: t('笔记'), icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' },
     { id: 'cards', label: t('卡片'), icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
     { id: 'settings', label: t('设置'), icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' },
-    { id: 'about', label: t('关于'), icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
   ];
 
   return (
@@ -121,22 +119,22 @@ export default function App() {
           <h1 className="text-lg font-bold text-primary-600">Cardbox</h1>
         </div>
         {token && !focusMode && (
-          <nav className="flex items-center gap-1 no-drag">
+          <nav className="flex items-center gap-1.5 no-drag">
             {navItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => setTab(item.id)}
-                className={`relative inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors duration-100 active:scale-[0.98] ${
+                className={`relative inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm transition-colors duration-150 ${
                   tab === item.id
-                    ? 'bg-primary-active font-bold text-main shadow-sm'
-                    : 'text-muted hover-item font-medium hover:text-main'
+                    ? 'tab-active font-semibold'
+                    : 'text-muted hover-item font-semibold hover:text-main'
                 }`}
               >
                 <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon} />
                 </svg>
                 {item.label}
-                {item.id === 'about' && updateReady && (
+                {item.id === 'settings' && updateReady && (
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500" title={t('有新版本 v{v}', { v: updateReady.latestVersion })} />
                 )}
               </button>
@@ -174,9 +172,6 @@ export default function App() {
                  </div>
                  <div className={tab === 'settings' ? 'block animate-page max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl mx-auto' : 'hidden'}>
                    <SettingsPage active={tab === 'settings'} />
-                 </div>
-                 <div className={tab === 'about' ? 'block animate-page max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl mx-auto' : 'hidden'}>
-                   <AboutPage />
                  </div>
                </>
              )}

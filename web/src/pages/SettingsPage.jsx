@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../api';
+import AboutPage from './AboutPage';
 import { applyTheme, readTheme, saveTheme, getContrastColor, importCustomFont, resetTheme } from '../theme';
 import { t, useI18n, setLang, getLang, LANGS } from '../i18n';
 import { STRICTNESS_OPTIONS, getStrictness, setStrictness } from '../judgePrefs';
@@ -14,6 +15,7 @@ const PRESETS = [
 
 export default function SettingsPage({ active = true }) {
   useI18n();
+  const [sec, setSec] = useState('ai');
   const [key, setKey] = useState('');
   const [status, setStatus] = useState({ hasKey: false, maskedKey: '' });
   const [msg, setMsg] = useState('');
@@ -73,10 +75,26 @@ export default function SettingsPage({ active = true }) {
 
   return (
     <div className="space-y-6 pb-20">
-      <h2 className="text-2xl font-bold text-main mb-6">{t('设置')}</h2>
+      <div className="flex gap-8 items-start">
+        <aside className="w-44 shrink-0 space-y-1 hidden md:block">
+          {[
+            { id: 'ai', label: t('AI 设置') },
+            { id: 'personal', label: t('个性化设置') },
+            { id: 'storage', label: t('存储设置') },
+            { id: 'about', label: t('关于') },
+          ].map((o) => (
+            <button
+              key={o.id}
+              type="button"
+              onClick={() => setSec(o.id)}
+              className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${sec === o.id ? 'bg-primary-600/10 text-primary-700 font-medium' : 'text-main hover:bg-app'}`}
+            >{o.label}</button>
+          ))}
+        </aside>
+        <div className="flex-1 min-w-0 space-y-6">
 
       {/* AI 引擎 */}
-      <div className="bg-card rounded-xl shadow-sm border border-app overflow-hidden">
+      <div className={`bg-card rounded-xl shadow-sm border border-app overflow-hidden ${sec === 'ai' ? '' : 'hidden'}`}>
         <div className="px-6 py-4 border-b border-app bg-black/5">
           <h3 className="font-bold text-primary-600">{t('AI 引擎 (API)')}</h3>
         </div>
@@ -101,7 +119,7 @@ export default function SettingsPage({ active = true }) {
       </div>
 
       {/* 语言 */}
-      <div className="bg-card rounded-xl shadow-sm border border-app overflow-hidden">
+      <div className={`bg-card rounded-xl shadow-sm border border-app overflow-hidden ${sec === 'personal' ? '' : 'hidden'}`}>
         <div className="px-6 py-4 border-b border-app bg-black/5">
           <h3 className="font-bold text-primary-600">{t('界面语言')}</h3>
         </div>
@@ -121,7 +139,7 @@ export default function SettingsPage({ active = true }) {
         </div>
       </div>
       {/* AI 判定严格度 */}
-      <div className="bg-card rounded-xl shadow-sm border border-app overflow-hidden">
+      <div className={`bg-card rounded-xl shadow-sm border border-app overflow-hidden ${sec === 'ai' ? '' : 'hidden'}`}>
         <div className="px-6 py-4 border-b border-app bg-black/5">
           <h3 className="font-bold text-primary-600">{t('AI 判定严格度')}</h3>
         </div>
@@ -142,7 +160,7 @@ export default function SettingsPage({ active = true }) {
       </div>
 
       {/* 主题外观 */}
-      <div className="bg-card rounded-xl shadow-sm border border-app overflow-hidden">
+      <div className={`bg-card rounded-xl shadow-sm border border-app overflow-hidden ${sec === 'personal' ? '' : 'hidden'}`}>
         <div className="px-6 py-4 border-b border-app bg-black/5">
           <div className="flex items-center gap-3">
             <h3 className="font-bold text-primary-600">{t('主题与外观')}</h3>
@@ -224,6 +242,24 @@ export default function SettingsPage({ active = true }) {
               {fontMsg && <span className="text-xs text-muted">{fontMsg}</span>}
             </div>
           </div>
+        </div>
+      </div>
+        <div className={`space-y-6 ${sec === 'storage' ? '' : 'hidden'}`}>
+          <div className="bg-card rounded-xl shadow-sm border border-app overflow-hidden">
+            <div className="px-6 py-4 border-b border-app bg-black/5">
+              <h3 className="font-bold text-primary-600">{t('数据存储')}</h3>
+            </div>
+            <div className="p-6 space-y-3 text-sm text-main">
+              <p>{t('笔记、卡片、复习记录都存在本机一个 SQLite 文件里，不上传任何服务器。')}</p>
+              <p className="text-xs text-muted break-all">%APPDATA%\Cardbox\cardbox.db</p>
+              <p className="text-xs text-muted">{t('API Key、主题、字号这些偏好也只保存在这台电脑上。')}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className={`${sec === 'about' ? '' : 'hidden'}`}>
+          <AboutPage />
+        </div>
         </div>
       </div>
     </div>
