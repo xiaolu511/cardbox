@@ -9,123 +9,107 @@ function summarize(text, max = 90) {
   return line.length > max ? `${line.slice(0, max)}…` : line;
 }
 
+function parseTags(raw) {
+  try {
+    const v = JSON.parse(raw);
+    return Array.isArray(v) ? v.filter((x) => typeof x === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
 export default function CardsPage({ active = true }) {
   useI18n();
+  const [cats, setCats] = useState([]);
+  const [catErr, setCatErr] = useState('');
+  const [activeCat, setActiveCat] = useState(null); // null = 分类列表；{id,name} = 进入某个分类
+  const [tab, setTab] = useState('cards');
+
+  // 全部视图（保留搜索、批量、分页）
   const [q, setQ] = useState('');
   const [cards, setCards] = useState([]);
   const [err, setErr] = useState('');
-
-  // 🌟 分页状态
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
-  const busyRef = useRef(false);
-
-  // 🌟 按笔记折叠：默认全收起，搜出结果时全部展开
   const [expanded, setExpanded] = useState(() => new Set());
   const [editing, setEditing] = useState(null);
-  // 批量删除
   const [batchMode, setBatchMode] = useState(false);
   const [sel, setSel] = useState(() => new Set());
   const [batchBusy, setBatchBusy] = useState(false);
-  // 三种视图：知识点 / 待办 / 重要事项
-  const [tab, setTab] = useState('cards');
-  const [overview, setOverview] = useState({ todos: [], important: [] });
+  const busyRef = useRef(false);
 
-  async function loadOverview() {
+  // 分类详情（知识点 / 待办 / 重要事项）
+  const [overview, setOverview] = useState({ cards: [], todos: [], important: [] });
+
+  async function loadCats() {
     try {
-      const r = await api('/api/categories/all/overview');
-      setOverview({ todos: r.todos || [], important: r.important || [] });
-    } catch { /* 忽略：切回卡片页时会有自己的错误提示 */ }
+      const rows = await api('/api/categories');
+      setCats(Array.isArray(rows) ? rows : []);
+    } catch (e) { setCatErr(e.message); }
   }
 
-  async function toggleTodo(item) {
-    const next = item.status === 'done' ? 'open' : 'done';
-    setOverview((o) => ({ ...o, todos: o.todos.map((x) => (x.id === item.id ? { ...x, status: next } : x)) }));
+  async function loadOverview(catId) {
     try {
-      await api('/api/todos/' + item.id, { method: 'PATCH', body: { status: next } });
-    } catch {
-      await loadOverview();
-    }
+      const r = await api('/api/categories/' + catId + '/overview');
+      setOverview({ cards: r.cards || [], todos: r.todos || [], important: r.important || [] });
+    } catch (e) { setErr(e.message); }
   }
 
-  async function load(keyword = '', reset = false) {
+  useEffect(() => {
+    if (!active) return;
+    if (activeCat) loadOverview(activeCat.id);
+    else loadCats();
+  }, [active, activeCat]);
+
+  async function load(query = '', reset = true) {
     if (busyRef.current) return;
     busyRef.current = true;
     setLoading(true);
     setErr('');
     try {
-      const currentPage = reset ? 1 : page;
-      const res = await api(`/api/cards?q=${encodeURIComponent(keyword)}&page=${currentPage}&limit=20`);
-
-      if (reset) {
-        setCards(res.data);
-        setPage(2);
-      } else {
-        setCards(prev => [...prev, ...res.data]);
-        setPage(prev => prev + 1);
-      }
-      setHasMore(res.hasMore);
-    } catch (e) {
-      setErr(e.message);
-    } finally {
-      busyRef.current = false;
-      setLoading(false);
-    }
+      const p = reset ? 1 : page + 1;
+      const r = await api(`/api/cards?q=${encodeURIComponent(query)}&page=${p}`);
+      const list = Array.isArray(r) ? r : (r.data || []);
+      setCards(reset ? list : [...cards, ...list]);
+      setHasMore(Boolean(r.hasMore));
+      setPage(p);
+      if (reset) { setSel(new Set()); setBatchMode(false); }
+    } catch (e) { setErr(e.message); } finally { setLoading(false); busyRef.current = false; }
   }
 
-  useEffect(() => { if (active) load('', true); }, [active]);
   useEffect(() => {
-    if (!active || tab === 'cards') return;
-    loadOverview();
-  }, [active, tab]);
+    if (!active || !activeCat || activeCat.id !== 'all') return;
+    if (tab !== 'cards') return;
+    load('', true);
+  }, [active, activeCat, tab]);
 
-  // 按 note_id 分组，保持接口给的顺序（新的在前）
-  const groups = useMemo(() => {
-    const map = new Map();
-    for (const c of cards) {
-      if (!map.has(c.note_id)) {
-        map.set(c.note_id, { noteId: c.note_id, noteText: c.note_text, cards: [] });
-      }
-      map.get(c.note_id).cards.push(c);
-    }
-    return [...map.values()];
-  }, [cards]);
+  async function toggleTodo(item) {
+    const next = item.status === 'done' ? 'open' : 'done';
+    setOverview((o) => ({ ...o, todos: o.todos.map((x) => (x.id === item.id ? { ...x, status: next } : x)) }));
+    try { await api('/api/todos/' + item.id, { method: 'PATCH', body: { status: next } }); }
+    catch { loadOverview(activeCat.id); }
+  }
 
-  // 搜索时直接展开所有分组，不然点了搜索还得挨个点开
-  useEffect(() => {
-    if (q.trim()) setExpanded(new Set(groups.map(g => g.noteId)));
-  }, [q, groups.length]);
-
-  const toggle = (noteId) => {
-    setExpanded(prev => {
+  function toggle(noteId) {
+    setExpanded((prev) => {
       const next = new Set(prev);
-      next.has(noteId) ? next.delete(noteId) : next.add(noteId);
+      if (next.has(noteId)) next.delete(noteId); else next.add(noteId);
       return next;
     });
-  };
-
-  async function delCard(id) {
-    if (!confirm(t('确定要删除这张卡片吗？'))) return;
-    try {
-      await api(`/api/cards/${id}`, { method: 'DELETE' });
-      // 删完重拉第一页：只从本地数组里抠掉一条会让 offset 分页错位，下一页漏一张
-      await load(q, true);
-    } catch (e) { alert(e.message); }
   }
 
-  async function batchDelete() {
-    if (sel.size === 0) return;
-    if (!confirm(t('确定要删除选中的 {n} 张卡片吗？', { n: sel.size }))) return;
-    setBatchBusy(true);
-    try {
-      for (const id of [...sel]) {
-        try { await api(`/api/cards/${id}`, { method: 'DELETE' }); } catch (e) { alert(e.message); }
-      }
-      setBatchMode(false);
-      await load(q, true);
-    } finally { setBatchBusy(false); }
-  }
+  // 知识点：全部用分页接口，分类内用 overview
+  const groups = useMemo(() => {
+    const source = activeCat && activeCat.id === 'all' ? cards : overview.cards;
+    const map = new Map();
+    for (const c of source) {
+      const key = c.note_id;
+      if (!map.has(key)) map.set(key, { noteId: key, noteText: c.raw_text || '', cards: [] });
+      map.get(key).cards.push(c);
+    }
+    return [...map.values()];
+  }, [cards, overview.cards, activeCat]);
 
   const allCardIds = groups.flatMap((g) => g.cards.map((c) => c.id));
   const allSelected = allCardIds.length > 0 && sel.size === allCardIds.length;
@@ -135,34 +119,98 @@ export default function CardsPage({ active = true }) {
   }
 
   function toggleGroup(g) {
-    const ids = g.cards.map((c) => c.id);
     setSel((prev) => {
       const next = new Set(prev);
-      const allIn = ids.every((id) => next.has(id));
-      ids.forEach((id) => (allIn ? next.delete(id) : next.add(id)));
+      const ids = g.cards.map((c) => c.id);
+      const all = ids.every((id) => next.has(id));
+      ids.forEach((id) => (all ? next.delete(id) : next.add(id)));
       return next;
     });
   }
 
-  function toggleSel(id) {
-    setSel(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  }
-
-  function onUpdated(updated) {
-    setCards(prev => prev.map(c => (c.id === updated.id ? { ...c, ...updated } : c)));
+  async function batchDelete() {
+    if (sel.size === 0) return;
+    if (!confirm(t('确定要删除选中的 {n} 张卡片吗？', { n: sel.size }))) return;
+    setBatchBusy(true);
+    setErr('');
+    try {
+      for (const id of sel) await api(`/api/cards/${id}`, { method: 'DELETE' });
+      setSel(new Set());
+      setBatchMode(false);
+      if (activeCat && activeCat.id !== 'all') await loadOverview(activeCat.id);
+      else await load(q, true);
+    } catch (e) { setErr(e.message); } finally { setBatchBusy(false); }
   }
 
   function onSaved(updated) {
-    onUpdated(updated);
     setEditing(null);
+    setCards((list) => list.map((c) => (c.id === updated.id ? updated : c)));
+    setOverview((o) => ({ ...o, cards: o.cards.map((c) => (c.id === updated.id ? updated : c)) }));
+  }
+  function onUpdated(updated) {
+    setCards((list) => list.map((c) => (c.id === updated.id ? updated : c)));
+    setOverview((o) => ({ ...o, cards: o.cards.map((c) => (c.id === updated.id ? updated : c)) }));
   }
 
+  // ================= 分类列表 =================
+  if (!activeCat) {
+    const total = cats.reduce((n, c) => n + (c.cardCount || 0), 0);
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-bold text-main">{t('分类')}</h2>
+          <button onClick={loadCats} className="text-sm text-muted hover:text-main transition-colors">{t('刷新')}</button>
+        </div>
+        {catErr && <p className="text-red-500 text-sm">{catErr}</p>}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <button
+            type="button"
+            onClick={() => { setActiveCat({ id: 'all', name: t('全部') }); setTab('cards'); }}
+            className="text-left p-5 rounded-2xl border border-app bg-card hover:border-primary-500/50 transition-colors"
+          >
+            <p className="text-sm font-medium text-main">{t('全部')}</p>
+            <p className="text-xs text-muted mt-1">{t('{n} 张卡片', { n: total })}</p>
+          </button>
+          {cats.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => { setActiveCat({ id: c.id, name: c.name }); setTab('cards'); }}
+              className="text-left p-5 rounded-2xl border border-app bg-card hover:border-primary-500/50 transition-colors"
+            >
+              <p className="text-sm font-medium text-main truncate">{c.name}</p>
+              <p className="text-xs text-muted mt-1">
+                {t('{n} 张卡片', { n: c.cardCount || 0 })}
+                {c.todoCount ? ` · ${t('{n} 条待办', { n: c.todoCount })}` : ''}
+                {c.importantCount ? ` · ${t('{n} 条重要', { n: c.importantCount })}` : ''}
+              </p>
+            </button>
+          ))}
+        </div>
+        {cats.length === 0 && !catErr && (
+          <div className="py-16 text-center text-muted text-sm">{t('还没有分类，分析笔记时会让 AI 自动归类。')}</div>
+        )}
+      </div>
+    );
+  }
+
+  const isAll = activeCat.id === 'all';
+  const todos = overview.todos;
+  const important = overview.important;
+
+  // ================= 分类详情 =================
   return (
     <div className="space-y-6 bg-card p-6 rounded-2xl shadow-sm border border-app transition-colors duration-300">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => { setActiveCat(null); setTab('cards'); }}
+          className="text-muted hover:text-main transition-colors text-sm inline-flex items-center gap-1"
+        >
+          ← {t('全部分类')}
+        </button>
+        <h2 className="font-bold text-main">{activeCat.name}</h2>
+      </div>
+
       <div className="flex gap-1 p-1 rounded-xl bg-app border border-app w-fit">
         {[
           { key: 'cards', label: t('知识点') },
@@ -179,152 +227,156 @@ export default function CardsPage({ active = true }) {
       </div>
 
       {tab === 'cards' && (<>
-      <form onSubmit={(e) => { e.preventDefault(); load(q, true); }} className="flex gap-2">
-        <input
-          value={q} onChange={(e) => setQ(e.target.value)}
-          placeholder={t('搜问题或答案（支持全文检索）...')}
-          className="flex-1 border border-app bg-transparent text-main p-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm placeholder-gray-400"
-        />
-        <button className="px-5 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors text-sm">{t('搜索')}</button>
-      </form>
-
-      <div className="flex items-center gap-3 flex-wrap text-sm">
-        {!batchMode ? (
-          <button
-            onClick={() => setBatchMode(true)}
-            className="px-4 py-1.5 rounded-lg border border-app text-main hover:border-primary-500/60 transition-colors"
-          >{t('批量')}</button>
-        ) : (
-          <>
-            <span className="text-muted">{t('已选 {n} 张', { n: sel.size })}</span>
-            <button
-              onClick={toggleAll}
-              disabled={allCardIds.length === 0}
-              className="px-3 py-1.5 rounded-lg text-sm text-primary-600 hover:underline disabled:opacity-40"
-            >{allSelected ? t('取消全选') : t('全选')}</button>
-            <button
-              onClick={batchDelete}
-              disabled={sel.size === 0 || batchBusy}
-              className="px-4 py-1.5 rounded-lg border border-red-300 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
-            >{t('批量删除')}</button>
-            <button
-              onClick={() => setBatchMode(false)}
-              className="px-4 py-1.5 rounded-lg text-muted hover-item transition-colors"
-            >{t('退出批量')}</button>
-          </>
+        {isAll && (
+          <form onSubmit={(e) => { e.preventDefault(); load(q, true); }} className="flex gap-2">
+            <input
+              value={q} onChange={(e) => setQ(e.target.value)}
+              placeholder={t('搜问题或答案（支持全文检索）...')}
+              className="flex-1 border border-app bg-transparent text-main p-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm placeholder-gray-400"
+            />
+            <button className="px-5 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-700 transition-colors text-sm">{t('搜索')}</button>
+          </form>
         )}
-      </div>
 
-      {err && <p className="text-red-500 text-sm">{err}</p>}
-
-      <div className="space-y-3">
-        {groups.map((g) => {
-          const open = expanded.has(g.noteId);
-          return (
-            <div key={g.noteId} className="border border-app rounded-xl overflow-hidden bg-card">
-              <div className="w-full flex items-start gap-3 p-4 hover:bg-black/[0.03] transition-colors">
-                {batchMode && (
-                  <input
-                    type="checkbox"
-                    checked={g.cards.length > 0 && g.cards.every((c) => sel.has(c.id))}
-                    ref={(el) => { if (el) el.indeterminate = g.cards.some((c) => sel.has(c.id)) && !g.cards.every((c) => sel.has(c.id)); }}
-                    onChange={() => toggleGroup(g)}
-                    className="mt-1 w-4 h-4 accent-[var(--custom-primary)] shrink-0"
-                    title={t('选中这条笔记的全部卡片')}
-                  />
-                )}
+        <div className="flex items-center gap-3 flex-wrap text-sm">
+          {!batchMode ? (
+            <button
+              onClick={() => setBatchMode(true)}
+              className="px-4 py-1.5 rounded-lg border border-app text-main hover:border-primary-500/60 transition-colors"
+            >{t('批量')}</button>
+          ) : (
+            <>
+              <span className="text-muted">{t('已选 {n} 张', { n: sel.size })}</span>
               <button
-                onClick={() => toggle(g.noteId)}
-                className="flex-1 flex items-start gap-3 text-left"
-                aria-expanded={open}
-              >
-                <svg
-                  className={`w-4 h-4 mt-1 shrink-0 text-muted transition-transform ${open ? 'rotate-90' : ''}`}
-                  fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                </svg>
-                <span className="flex-1 text-sm text-main leading-relaxed line-clamp-2">{summarize(g.noteText)}</span>
-                <span className="shrink-0 text-xs px-2 py-0.5 rounded-md bg-primary-50 text-primary-700 font-medium">
-                  {t('{n} 张卡片', { n: g.cards.length })}
-                </span>
-              </button>
-              </div>
+                onClick={toggleAll}
+                disabled={allCardIds.length === 0}
+                className="px-3 py-1.5 rounded-lg text-sm text-primary-600 hover:underline disabled:opacity-40"
+              >{allSelected ? t('取消全选') : t('全选')}</button>
+              <button
+                onClick={batchDelete}
+                disabled={sel.size === 0 || batchBusy}
+                className="px-4 py-1.5 rounded-lg border border-red-300 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
+              >{t('批量删除')}</button>
+              <button
+                onClick={() => setBatchMode(false)}
+                className="px-4 py-1.5 rounded-lg text-muted hover-item transition-colors"
+              >{t('退出批量')}</button>
+            </>
+          )}
+        </div>
 
-              {open && (
-                <div className="px-4 pb-4 pt-1 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {g.cards.map((c) => (
-                    <div key={c.id} className="border border-app rounded-xl p-5 space-y-3 bg-card group hover:shadow-md transition-all flex flex-col h-full relative">
-                      <div className="flex justify-between items-start gap-3">
-                        <div className="flex items-start gap-2 min-w-0">
-                          {batchMode && (
-                            <input
-                              type="checkbox"
-                              checked={sel.has(c.id)}
-                              onChange={() => toggleSel(c.id)}
-                              className="mt-1 w-4 h-4 accent-[var(--custom-primary)] shrink-0"
-                            />
-                          )}
-                          <h3 className="font-bold text-main text-base leading-snug">{c.question}</h3>
-                        </div>
-                        <div className="flex items-center gap-0.5 shrink-0">
-                          <button onClick={() => delCard(c.id)} className="p-1.5 rounded-lg text-muted hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100" title={t('删除卡片')}>✕</button>
+        {err && <p className="text-red-500 text-sm">{err}</p>}
+
+        <div className="space-y-3">
+          {groups.map((g) => {
+            const open = expanded.has(g.noteId);
+            return (
+              <div key={g.noteId} className="border border-app rounded-xl overflow-hidden bg-card">
+                <div className="w-full flex items-start gap-3 p-4 hover:bg-black/[0.03] transition-colors">
+                  {batchMode && (
+                    <input
+                      type="checkbox"
+                      checked={g.cards.length > 0 && g.cards.every((c) => sel.has(c.id))}
+                      ref={(el) => { if (el) el.indeterminate = g.cards.some((c) => sel.has(c.id)) && !g.cards.every((c) => sel.has(c.id)); }}
+                      onChange={() => toggleGroup(g)}
+                      className="mt-1 w-4 h-4 accent-[var(--custom-primary)] shrink-0"
+                      title={t('选中这条笔记的全部卡片')}
+                    />
+                  )}
+                  <button
+                    onClick={() => toggle(g.noteId)}
+                    className="flex-1 flex items-start gap-3 text-left"
+                    aria-expanded={open}
+                  >
+                    <svg
+                      className={`w-4 h-4 mt-1 shrink-0 text-muted transition-transform ${open ? 'rotate-90' : ''}`}
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                    <span className="flex-1 text-sm text-main leading-relaxed line-clamp-2">{summarize(g.noteText)}</span>
+                    <span className="shrink-0 text-xs px-2 py-0.5 rounded-md bg-primary-50 text-primary-700 font-medium">
+                      {t('{n} 张卡片', { n: g.cards.length })}
+                    </span>
+                  </button>
+                </div>
+
+                {open && (
+                  <div className="px-4 pb-4 pt-1 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {g.cards.map((c) => (
+                      <div key={c.id} className="border border-app rounded-xl p-5 space-y-3 bg-card group hover:shadow-md transition-all flex flex-col h-full relative">
+                        <div className="flex items-start gap-2">
+                          <p className="flex-1 font-semibold text-main leading-snug pr-8">{c.question}</p>
                           <button
                             onClick={() => setEditing(c)}
                             title={t('修改卡片')}
-                            className="p-1.5 rounded-lg text-muted hover:text-primary-600 hover:bg-primary-50 transition-colors"
+                            className="absolute top-3 right-3 p-1.5 rounded-md text-muted opacity-70 hover:opacity-100 hover:text-primary-600 hover:bg-primary-50 transition-all"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897l12.682-12.68z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 112.828 2.828L11.828 15.828a2 2 0 01-1.414.586H7v-3.414a2 2 0 01.586-1.414z" />
                             </svg>
                           </button>
+                          <button
+                            onClick={async () => {
+                              if (!confirm(t('⚠️ 确定要删除这张卡片吗？'))) return;
+                              try {
+                                await api(`/api/cards/${c.id}`, { method: 'DELETE' });
+                                if (isAll) await load(q, true); else await loadOverview(activeCat.id);
+                              } catch (e) { setErr(e.message); }
+                            }}
+                            title={t('删除这张卡片')}
+                            className="absolute top-3 right-10 p-1.5 rounded-md text-muted opacity-0 group-hover:opacity-100 hover:text-red-600 hover:bg-red-50 transition-all"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M6 18L18 6M6 6l12 12" /></svg>
+                          </button>
                         </div>
-                      </div>
-                      <p className="text-sm text-muted whitespace-pre-wrap flex-1">{c.answer}</p>
-                      <div className="flex flex-wrap gap-2 pt-1">
+                        <p className="text-sm text-muted whitespace-pre-wrap leading-relaxed">{c.answer}</p>
                         {(() => {
-                          try { return JSON.parse(c.tags).map(tag => <span key={tag} className="text-xs bg-primary-50 text-primary-700 px-2 py-0.5 rounded-md font-medium">{tag}</span>); }
-                          catch { return null; }
+                          const tags = parseTags(c.tags);
+                          if (!tags.length) return null;
+                          return (
+                            <div className="flex flex-wrap gap-1.5">
+                              {tags.map((tag, i) => (
+                                <span key={i} className="text-xs px-2 py-0.5 rounded-md bg-app text-muted">{tag}</span>
+                              ))}
+                            </div>
+                          );
                         })()}
                       </div>
-
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {cards.length === 0 && !err && (
-        <div className="h-[calc(100vh-300px)] flex flex-col items-center justify-center text-muted animate-page">
-          <svg className="w-16 h-16 mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-          <p className="text-lg font-medium">{q ? t('没有搜到相关卡片') : t('还没有卡片，去「笔记」页拆几张吧')}</p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
-      )}
 
-      {/* 🌟 加载更多按钮 */}
-      {hasMore && cards.length > 0 && (
-        <div className="text-center pt-4">
-          <button
-            onClick={() => load(q, false)}
-            disabled={loading}
-            className="px-6 py-2 bg-app border border-app text-muted rounded-lg text-sm hover-item transition-colors disabled:opacity-50"
-          >
-            {loading ? t('加载中...') : t('加载更多')}
-          </button>
-        </div>
-      )}
+        {groups.length === 0 && !err && (
+          <div className="h-[calc(100vh-320px)] flex flex-col items-center justify-center text-muted animate-page">
+            <svg className="w-16 h-16 mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+            <p className="text-lg font-medium">{q && isAll ? t('没有搜到相关卡片') : t('这个分类下还没有卡片')}</p>
+          </div>
+        )}
 
+        {isAll && hasMore && groups.length > 0 && (
+          <div className="text-center pt-4">
+            <button
+              onClick={() => load(q, false)}
+              disabled={loading}
+              className="px-6 py-2 bg-app border border-app text-muted rounded-lg text-sm hover-item transition-colors disabled:opacity-50"
+            >
+              {loading ? t('加载中...') : t('加载更多')}
+            </button>
+          </div>
+        )}
       </>)}
 
       {tab === 'todos' && (
         <div className="space-y-3">
-          {overview.todos.length === 0 && (
+          {todos.length === 0 && (
             <div className="py-16 text-center text-muted text-sm">{t('还没有待办，分析笔记时会自动提取。')}</div>
           )}
-          {overview.todos.map((item) => (
+          {todos.map((item) => (
             <div
               key={item.id}
               className={`flex items-start gap-3 p-4 rounded-xl border transition-colors ${item.status === 'done' ? 'border-app bg-app/40' : 'border-app bg-card hover:border-primary-500/40'}`}
@@ -351,10 +403,10 @@ export default function CardsPage({ active = true }) {
 
       {tab === 'important' && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {overview.important.length === 0 && (
+          {important.length === 0 && (
             <div className="md:col-span-2 py-16 text-center text-muted text-sm">{t('还没有重要事项。')}</div>
           )}
-          {overview.important.map((item) => (
+          {important.map((item) => (
             <div key={item.id} className="border border-app rounded-xl p-5 bg-card space-y-2">
               <p className="text-sm font-medium text-main">{item.title}</p>
               {item.detail && <p className="text-sm text-muted whitespace-pre-wrap">{item.detail}</p>}
@@ -395,7 +447,6 @@ function EditCardModal({ card, onClose, onSaved, onUpdated }) {
     try {
       const r = await api(`/api/cards/${card.id}/regen`, { method: 'POST', body: { question, lang: getLang() } });
       setAnswer(r.data.answer);
-      // 重答只在弹窗里预览，不关窗；用户确认后点「保存」再落一次
       onUpdated(r.data);
     } catch (e) { setErr(e.message); } finally { setBusy(''); }
   }

@@ -15,6 +15,13 @@ export const LANGS = [
 ];
 
 const TW = {
+  "分类": "分類",
+  "刷新": "重新整理",
+  "全部分类": "全部分類",
+  "{n} 条待办": "{n} 條待辦",
+  "{n} 条重要": "{n} 條重要",
+  "还没有分类，分析笔记时会让 AI 自动归类。": "還沒有分類，分析筆記時會讓 AI 自動歸類。",
+  "这个分类下还没有卡片": "這個分類下還沒有卡片",
   "知识点": "知識點",
   "待办事项": "待辦事項",
   "重要事项": "重要事項",
@@ -235,6 +242,13 @@ const TW = {
 };
 
 const EN = {
+  "分类": "Categories",
+  "刷新": "Refresh",
+  "全部分类": "All categories",
+  "{n} 条待办": "{n} to-do",
+  "{n} 条重要": "{n} important",
+  "还没有分类，分析笔记时会让 AI 自动归类。": "No categories yet — the AI will create them when you analyse notes.",
+  "这个分类下还没有卡片": "No cards in this category yet",
   "知识点": "Knowledge",
   "待办事项": "To-dos",
   "重要事项": "Important",
