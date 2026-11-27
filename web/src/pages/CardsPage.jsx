@@ -268,7 +268,7 @@ export default function CardsPage({ active = true }) {
   if (!activeCat) {
     const total = cats.reduce((n, c) => n + (c.cardCount || 0), 0);
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 animate-list">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-main">{t('分类')}</h2>
           <button
@@ -451,7 +451,7 @@ export default function CardsPage({ active = true }) {
 
   // ================= 分类详情 =================
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 animate-detail">
       <div className="flex items-center gap-3">
         <button
           onClick={() => { setActiveCat(null); setTab('cards'); }}
