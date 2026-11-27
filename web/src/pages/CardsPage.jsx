@@ -481,6 +481,55 @@ export default function CardsPage({ active = true }) {
   // ================= 分类详情 =================
   return (
     <div className="space-y-4 animate-detail">
+      {viewSwitch}
+      <div className="flex gap-6 items-start">
+        <aside className="w-52 shrink-0 space-y-1 hidden md:block">
+          <button
+            type="button"
+            onClick={() => { setActiveCat({ id: 'all', name: t('全部') }); setTab('cards'); }}
+            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${activeCat.id === 'all' ? 'bg-primary-600/10 text-primary-700 font-medium' : 'text-main hover:bg-app'}`}
+          >{t('全部')}</button>
+          {cats.map((c) => (
+            <div key={c.id} className="group relative">
+              <button
+                type="button"
+                onClick={() => { setActiveCat({ id: c.id, name: c.name }); setTab('cards'); }}
+                className={`w-full text-left pl-3 pr-16 py-2 rounded-lg text-sm truncate transition-colors ${activeCat.id === c.id ? 'bg-primary-600/10 text-primary-700 font-medium' : 'text-main hover:bg-app'}`}
+              >{c.name}</button>
+              <span className="absolute right-1 top-1/2 -translate-y-1/2 hidden group-hover:flex items-center gap-0.5">
+                <button
+                  type="button"
+                  title={t('管理笔记')}
+                  onClick={() => { setActiveCat(null); openManage(c); }}
+                  className="p-1 rounded text-muted hover:text-primary-600 hover:bg-primary-50 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+                </button>
+                <button
+                  type="button"
+                  title={t('删除分类')}
+                  onClick={async () => {
+                    if (!confirm(t('⚠️ 确定删除分类「{name}」吗？里面的内容会回到「全部」，不会被删除。', { name: c.name }))) return;
+                    try {
+                      await api('/api/categories/' + c.id, { method: 'DELETE' });
+                      await loadCats();
+                      setActiveCat({ id: 'all', name: t('全部') });
+                    } catch (err) { setCatErr(err.message); }
+                  }}
+                  className="p-1 rounded text-muted hover:text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-7H4m5-8V3a1 1 0 011-1h4a1 1 0 011 1v2m-6 0h6" /></svg>
+                </button>
+              </span>
+            </div>
+          ))}
+          <button
+            type="button"
+            onClick={() => { setActiveCat(null); setNewCatName(''); setNewCatOpen(true); }}
+            className="w-full text-left px-3 py-2 rounded-lg text-sm text-muted border border-dashed border-app hover:text-primary-600 hover:border-primary-500/50 transition-colors"
+          >+ {t('新建分类')}</button>
+        </aside>
+        <div className="flex-1 min-w-0 space-y-4">
       <div className="flex items-center gap-3">
         <button
           onClick={() => { setActiveCat(null); setTab('cards'); }}
@@ -716,7 +765,9 @@ export default function CardsPage({ active = true }) {
         document.body
       )}
     </div>
+          </div>
       </div>
+    </div>
   );
 }
 
