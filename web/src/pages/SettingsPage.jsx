@@ -49,6 +49,7 @@ export default function SettingsPage({ active = true }) {
   const [strictness, setStrictnessState] = useState(getStrictness());
   const [fontMsg, setFontMsg] = useState('');
   const [themeMsg, setThemeMsg] = useState('');
+  const bgInputRef = useRef(null);
   const fileInputRef = useRef(null);
 
   // 切回设置页时重读一次 key 状态（别的窗口/别的设备改过也能同步）
@@ -85,6 +86,53 @@ export default function SettingsPage({ active = true }) {
   };
 
   const changeFontSize = (e) => update({ fontSize: `${parseInt(e.target.value)}px` });
+  const changeOpacity = (e) => update({ opacity: parseInt(e.target.value) });
+
+  const handleBgUpload = (e) => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setThemeMsg(t('❌ 请选择图片文件')); return; }
+    const reader = new FileReader();
+    reader.onerror = () => setThemeMsg(t('❌ 读取图片失败'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => setThemeMsg(t('❌ 这张图打不开'));
+      img.onload = () => {
+        // 缩到 1920 宽、JPEG 0.82：一张壁纸约 200~400KB，放得进 localStorage
+        const maxW = 1920;
+        const scale = Math.min(1, maxW / img.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+        try {
+          localStorage.setItem('cardbox-bgimage', dataUrl);
+        } catch {
+          setThemeMsg(t('❌ 图片太大，存不下（换张小点的）'));
+          return;
+        }
+        const next = { ...theme, backgroundImage: dataUrl };
+        setTheme(next);
+        saveTheme(next);
+        applyTheme(next);
+        setThemeMsg(t('✅ 背景图已应用'));
+        setTimeout(() => setThemeMsg(''), 2500);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const clearBackground = () => {
+    const next = { ...theme, backgroundImage: '' };
+    setTheme(next);
+    saveTheme(next);
+    applyTheme(next);
+    setThemeMsg(t('已清除背景图'));
+    setTimeout(() => setThemeMsg(''), 2500);
+  };
 
   const handleFontUpload = (e) => {
     const file = e.target.files[0];
@@ -256,6 +304,38 @@ export default function SettingsPage({ active = true }) {
               value={parseInt(fontSize)} onChange={changeFontSize}
               className="flex-1 max-w-xs accent-primary-600" 
             />
+          </div>
+
+          {/* 面板不透明度 */}
+          <div className="flex items-center gap-6 pt-6 border-t border-app">
+            <p className="w-32 text-sm text-main shrink-0 font-medium">{t('面板不透明度 ({n}%)', { n: theme.opacity })}</p>
+            <input
+              type="range" min="30" max="100" step="5"
+              value={theme.opacity ?? 100} onChange={changeOpacity}
+              className="flex-1 max-w-xs accent-primary-600"
+            />
+            <span className="text-xs text-muted">{t('调低会让背景透出来')}</span>
+          </div>
+
+          {/* 背景图片 */}
+          <div className="flex items-center gap-6">
+            <p className="w-32 text-sm text-main shrink-0 font-medium">{t('背景图片')}</p>
+            <div className="flex items-center gap-3 flex-wrap">
+              {theme.backgroundImage ? (
+                <span className="w-16 h-10 rounded-lg border border-app bg-cover bg-center" style={{ backgroundImage: `url(${theme.backgroundImage})` }} />
+              ) : (
+                <span className="text-sm text-muted">{t('未设置')}</span>
+              )}
+              <input type="file" accept="image/*" ref={bgInputRef} onChange={handleBgUpload} className="hidden" />
+              <button onClick={() => bgInputRef.current.click()} className="px-4 py-1.5 border border-app rounded-lg text-sm text-main hover:bg-black/5 transition-colors">
+                {t('导入背景图片')}
+              </button>
+              {theme.backgroundImage && (
+                <button onClick={clearBackground} className="px-3 py-1.5 rounded-lg text-sm text-muted hover:text-main hover:bg-black/5 transition-colors">
+                  {t('清除背景')}
+                </button>
+              )}
+            </div>
           </div>
 
           {/* 字体库 */}

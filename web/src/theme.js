@@ -10,6 +10,8 @@ export const THEME_DEFAULTS = {
   card: '#ffffff',
   fontSize: '16px',
   fontFamily: '系统默认',
+  opacity: 100,          // 面板不透明度（%），100 = 实心
+  backgroundImage: '',   // 背景图 dataURL，空 = 纯色
 };
 
 // 系统默认字体栈：Windows 落微软雅黑、macOS 落苹方，避免中文到处不一样
@@ -24,6 +26,8 @@ const KEYS = {
   fontSize: 'cardbox-fontsize',
   fontFamily: 'cardbox-fontfamily',
   customFont: 'cardbox-customfont',
+  opacity: 'cardbox-opacity',
+  backgroundImage: 'cardbox-bgimage',
 };
 
 const read = (key, fallback) => {
@@ -46,6 +50,8 @@ export function readTheme() {
     card: read(KEYS.card, THEME_DEFAULTS.card),
     fontSize: read(KEYS.fontSize, THEME_DEFAULTS.fontSize),
     fontFamily: read(KEYS.fontFamily, THEME_DEFAULTS.fontFamily),
+    opacity: Number(read(KEYS.opacity, THEME_DEFAULTS.opacity)) || 100,
+    backgroundImage: read(KEYS.backgroundImage, ''),
   };
 }
 
@@ -59,6 +65,8 @@ export function saveTheme(theme) {
   write(KEYS.card, theme.card);
   write(KEYS.fontSize, theme.fontSize);
   write(KEYS.fontFamily, theme.fontFamily);
+  write(KEYS.opacity, String(theme.opacity ?? THEME_DEFAULTS.opacity));
+  write(KEYS.backgroundImage, theme.backgroundImage || '');
 }
 
 export function fontFamilyToCss(fontFamily) {
@@ -69,13 +77,17 @@ export function fontFamilyToCss(fontFamily) {
 // 一次把全部变量刷到 :root —— 这是修「切主题只改一半」的地方
 export function applyTheme(theme) {
   const { primary, bg, sidebar, card, fontSize, fontFamily } = theme;
+  const opacity = Math.min(100, Math.max(20, Number(theme.opacity) || 100));
   const style = document.documentElement.style;
   const isDark = getContrastColor(bg) === '#f8fafc';
 
   style.setProperty('--custom-primary', primary);
-  style.setProperty('--custom-bg', bg);
-  style.setProperty('--custom-sidebar', sidebar);
-  style.setProperty('--custom-card', card);
+  // 有背景图时让底色透明，图才透得出来（文字对比度仍按原底色算）
+  style.setProperty('--custom-bg', theme.backgroundImage ? 'transparent' : bg);
+  // 面板半透明：低于 100% 时用 color-mix 掺透明，背景图才能透出来
+  const alpha = (hex) => (opacity >= 100 ? hex : `color-mix(in srgb, ${hex} ${opacity}%, transparent)`);
+  style.setProperty('--custom-sidebar', alpha(sidebar));
+  style.setProperty('--custom-card', alpha(card));
   style.setProperty('--custom-text', isDark ? '#f8fafc' : '#1e293b');
   style.setProperty('--custom-text-muted', isDark ? '#94a3b8' : '#64748b');
   style.setProperty('--custom-border', isDark ? '#334155' : '#e2e8f0');
@@ -91,6 +103,17 @@ export function applyTheme(theme) {
     isDark ? primary : `color-mix(in srgb, ${primary} 80%, black)`
   );
   style.setProperty('--app-font-size', fontSize);
+  // 背景图铺满、固定，页面滚动时不动
+  const body = document.body;
+  if (theme.backgroundImage) {
+    body.style.backgroundImage = `url(${theme.backgroundImage})`;
+    body.style.backgroundSize = 'cover';
+    body.style.backgroundPosition = 'center';
+    body.style.backgroundAttachment = 'fixed';
+    body.style.backgroundRepeat = 'no-repeat';
+  } else {
+    body.style.backgroundImage = '';
+  }
   style.setProperty('--app-font-family', fontFamilyToCss(fontFamily));
 }
 
