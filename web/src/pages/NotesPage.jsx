@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useModalPresence } from '../modalAnim';
 import { api, upload } from '../api';
 import { onDropFile } from '../dropbus';
 import { t, useI18n, getLang } from '../i18n';
@@ -45,6 +46,10 @@ export default function NotesPage({ active = true }) {
   const [splitTarget, setSplitTarget] = useState(null);
   const [analysisForm, setAnalysisForm] = useState({ instruction: '', thinking: 'standard' });
   const [progress, setProgress] = useState({ open: false, step: 0, idx: 0, total: 1, category: '', error: '', done: false, result: null });
+
+  // 弹窗进出场（关闭时先播退场再卸载）
+  const splitModal = useModalPresence(!!splitTarget);
+  const progressModal = useModalPresence(progress.open);
   // 导入到哪个分类：'auto' = 让 AI 判断，数字 = 已有分类 id，'new' = 新建
   const [categories, setCategories] = useState([]);
   const [catChoice, setCatChoice] = useState('');
@@ -380,9 +385,9 @@ export default function NotesPage({ active = true }) {
         ))}
       </ul>
 
-      {splitTarget && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6">
-          <div className="w-full max-w-md bg-card border border-app rounded-2xl shadow-2xl overflow-hidden">
+      {splitModal.mounted && createPortal(
+        <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6 modal-overlay ${splitModal.closing ? 'closing' : ''}`}>
+          <div className={`w-full max-w-md bg-card border border-app rounded-2xl shadow-2xl overflow-hidden modal-panel ${splitModal.closing ? 'closing' : ''}`}>
             <div className="px-5 py-4 border-b border-app">
               <h3 className="font-bold text-main">
                 {splitTarget.ids.length > 1 ? t('批量分析') : t('拆成卡片')}
@@ -462,9 +467,9 @@ export default function NotesPage({ active = true }) {
           </div>
         </div>, document.body)}
 
-      {progress.open && createPortal(
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-6">
-          <div className="w-full max-w-sm bg-card border border-app rounded-2xl shadow-2xl overflow-hidden">
+      {progressModal.mounted && createPortal(
+        <div className={`fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-6 modal-overlay ${progressModal.closing ? 'closing' : ''}`}>
+          <div className={`w-full max-w-sm bg-card border border-app rounded-2xl shadow-2xl overflow-hidden modal-panel ${progressModal.closing ? 'closing' : ''}`}>
             <div className="px-5 py-4 border-b border-app">
               <h3 className="font-bold text-main">{progress.done ? t('分析完成') : t('正在分析…')}</h3>
               <p className="text-xs text-muted mt-1">

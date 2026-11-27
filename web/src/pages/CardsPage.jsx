@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useModalPresence } from '../modalAnim';
 import { api } from '../api';
 import ReviewPage from './ReviewPage';
 import { useSwitchClass } from '../switchAnim';
@@ -77,6 +78,11 @@ export default function CardsPage({ active = true }) {
   const [manageOwn, setManageOwn] = useState([]);
   const [manageSel, setManageSel] = useState(() => new Set());
   const [manageBusy, setManageBusy] = useState(false);
+
+  // 弹窗进出场（关闭时先播退场再卸载）
+  const newCatModal = useModalPresence(newCatOpen);
+  const manageModal = useModalPresence(!!manageCat);
+  const editModal = useModalPresence(!!editing);
 
   async function loadCats() {
     try {
@@ -604,9 +610,9 @@ export default function CardsPage({ active = true }) {
       )}
         </div>
 
-      {newCatOpen && createPortal(
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6">
-            <div className="w-full max-w-sm bg-card border border-app rounded-2xl shadow-2xl overflow-hidden">
+      {newCatModal.mounted && createPortal(
+          <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6 modal-overlay ${newCatModal.closing ? 'closing' : ''}`}>
+            <div className={`w-full max-w-sm bg-card border border-app rounded-2xl shadow-2xl overflow-hidden modal-panel ${newCatModal.closing ? 'closing' : ''}`}>
               <div className="px-5 pt-5 pb-3">
                 <h3 className="font-semibold text-main">{t('新建分类')}</h3>
               </div>
@@ -632,9 +638,9 @@ export default function CardsPage({ active = true }) {
           document.body
         )}
 
-        {manageCat && createPortal(
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6">
-            <div className="w-full max-w-2xl max-h-[80vh] bg-card border border-app rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+        {manageModal.mounted && createPortal(
+          <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6 modal-overlay ${manageModal.closing ? 'closing' : ''}`}>
+            <div className={`w-full max-w-2xl max-h-[80vh] bg-card border border-app rounded-2xl shadow-2xl flex flex-col overflow-hidden modal-panel ${manageModal.closing ? 'closing' : ''}`}>
               <div className="px-5 py-4 border-b border-app flex items-start justify-between gap-4">
                 <div>
                   <h3 className="font-semibold text-main">{t('管理「{name}」里的笔记', { name: manageCat.name })}</h3>
@@ -711,8 +717,8 @@ export default function CardsPage({ active = true }) {
           </div>,
           document.body
         )}
-{editing && createPortal(
-        <EditCardModal card={editing} onClose={() => setEditing(null)} onSaved={onSaved} onUpdated={onUpdated} />,
+{editModal.mounted && createPortal(
+        <EditCardModal closing={editModal.closing} card={editing} onClose={() => setEditing(null)} onSaved={onSaved} onUpdated={onUpdated} />,
         document.body
       )}
     </div>
@@ -722,7 +728,7 @@ export default function CardsPage({ active = true }) {
   );
 }
 
-function EditCardModal({ card, onClose, onSaved, onUpdated }) {
+function EditCardModal({ card, onClose, onSaved, onUpdated, closing }) {
   const [question, setQuestion] = useState(card.question);
   const [answer, setAnswer] = useState(card.answer);
   const [busy, setBusy] = useState('');
@@ -751,8 +757,8 @@ function EditCardModal({ card, onClose, onSaved, onUpdated }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-6" onClick={onClose}>
-      <div className="w-full max-w-lg max-h-[80vh] bg-card border border-app rounded-2xl shadow-2xl flex flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
+    <div className={`fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-6 modal-overlay ${closing ? 'closing' : ''}`} onClick={onClose}>
+      <div className={`w-full max-w-lg max-h-[80vh] bg-card border border-app rounded-2xl shadow-2xl flex flex-col overflow-hidden modal-panel ${closing ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-4 p-5 border-b border-app">
           <div>
             <h3 className="font-bold text-main">{t('修改卡片')}</h3>

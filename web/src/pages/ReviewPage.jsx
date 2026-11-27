@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { useModalPresence } from '../modalAnim';
 import { api } from '../api';
 import { getStrictness } from '../judgePrefs';
 import { setFocusMode } from '../focusbus';
@@ -53,6 +54,9 @@ export default function ReviewPage({ active, categoryId = 'all' }) {
 
   // 三张统计卡点开的详情抽屉
   const [detail, setDetail] = useState(null); // { type, title, items, loading, error }
+
+  // 弹窗进出场（关闭时先播退场再卸载）
+  const detailModal = useModalPresence(!!detail);
 
   // 🌟 加载主页数据
   // hide sidebar while answering, so the user cannot switch tabs mid-review
@@ -375,9 +379,9 @@ export default function ReviewPage({ active, categoryId = 'all' }) {
       </div>
 
       {/* 统计卡详情抽屉：挂到 body 上，否则外层 animate-page 的 transform 会把 fixed 的参照系变成那层容器 */}
-      {detail && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6 fade-in" onClick={() => setDetail(null)}>
-          <div className="w-full max-w-lg max-h-[70vh] bg-card border border-app rounded-2xl shadow-2xl flex flex-col overflow-hidden" onClick={e => e.stopPropagation()}>
+      {detailModal.mounted && createPortal(
+        <div className={`fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6 modal-overlay ${detailModal.closing ? 'closing' : ''}`} onClick={() => setDetail(null)}>
+          <div className={`w-full max-w-lg max-h-[70vh] bg-card border border-app rounded-2xl shadow-2xl flex flex-col overflow-hidden modal-panel ${detailModal.closing ? 'closing' : ''}`} onClick={e => e.stopPropagation()}>
             <div className="flex items-start justify-between p-5 border-b border-app">
               <div>
                 <h3 className="font-bold text-main">{t(detail.title)}</h3>

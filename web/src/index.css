@@ -135,11 +135,29 @@ body, #root {
   animation: detailIn 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
+
+/* 弹窗：遮罩淡入淡出，面板缩放+位移（拉伸弹出） */
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes modalOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(6px) scale(0.96); }
+}
+@keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes overlayOut { from { opacity: 1; } to { opacity: 0; } }
+.modal-overlay { animation: overlayIn 0.18s ease-out both; }
+.modal-overlay.closing { animation: overlayOut 0.18s ease-in both; }
+.modal-panel { animation: modalIn 0.22s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.modal-panel.closing { animation: modalOut 0.18s ease-in both; }
+
 @media (prefers-reduced-motion: reduce) {
   .animate-page,
   .animate-detail,
   .fade-in,
   .switch-x-f, .switch-x-b, .switch-y-f, .switch-y-b,
+  .modal-overlay, .modal-panel,
   .tab-active::after { animation: none; }
 }
 
