@@ -10,7 +10,7 @@ export const THEME_DEFAULTS = {
   card: '#ffffff',
   fontSize: '16px',
   fontFamily: '系统默认',
-  bgOpacity: 60,         // 背景图不透明度（%）：第一层，越低壁纸越淡
+  bgOpacity: 60,         // 第一层（背景/桌面）不透明度：越低壁纸露出越多
   panelOpacity: 100,     // 面板不透明度（%）：第二层左栏 + 第三层主体
   backgroundImage: '',   // 背景图 dataURL，空 = 纯色
 };
@@ -89,10 +89,11 @@ export function applyTheme(theme) {
   style.setProperty('--custom-primary', primary);
   // 第一层是底色；壁纸单独铺在它上面（body::before），所以底色保持实心
   style.setProperty('--custom-bg', bg);
-  // 第二/三层（左栏 + 主体）半透明：低于 100% 时掺透明，壁纸才能透出来
-  const alpha = (hex) => (panelOpacity >= 100 ? hex : `color-mix(in srgb, ${hex} ${panelOpacity}%, transparent)`);
-  style.setProperty('--custom-sidebar', alpha(sidebar));
-  style.setProperty('--custom-card', alpha(card));
+  // 第一层（背景）与 第二/三层（左栏 + 主体）各用各的透明度；顶栏固定实心
+  const withAlpha = (hex, pct) => (pct >= 100 ? hex : `color-mix(in srgb, ${hex} ${pct}%, transparent)`);
+  style.setProperty('--custom-app', withAlpha(bg, bgOpacity));
+  style.setProperty('--custom-sidebar', sidebar);
+  style.setProperty('--custom-card', withAlpha(card, panelOpacity));
   style.setProperty('--custom-text', isDark ? '#f8fafc' : '#1e293b');
   style.setProperty('--custom-text-muted', isDark ? '#94a3b8' : '#64748b');
   style.setProperty('--custom-border', isDark ? '#334155' : '#e2e8f0');
@@ -110,7 +111,6 @@ export function applyTheme(theme) {
   style.setProperty('--app-font-size', fontSize);
   // 壁纸铺在 body::before 上，靠 --custom-bg-opacity 控制它自己的不透明度
   style.setProperty('--custom-bg-image', theme.backgroundImage ? `url(${theme.backgroundImage})` : 'none');
-  style.setProperty('--custom-bg-opacity', bgOpacity / 100);
   style.setProperty('--app-font-family', fontFamilyToCss(fontFamily));
 }
 

@@ -313,10 +313,10 @@ export default function SettingsPage({ active = true }) {
             <input
               type="range" min="0" max="100" step="5"
               value={theme.bgOpacity ?? 60} onChange={changeBgOpacity}
-              disabled={!theme.backgroundImage}
+              
               className="flex-1 max-w-xs accent-primary-600 disabled:opacity-40"
             />
-            <span className="text-xs text-muted">{theme.backgroundImage ? t('第一层：壁纸的浓淡') : t('先导入背景图')}</span>
+            <span className="text-xs text-muted">{theme.backgroundImage ? t('第一层：桌面，越低壁纸越明显') : t('第一层：桌面（导入背景图后更明显）')}</span>
           </div>
 
           {/* 面板不透明度（第二层左栏 + 第三层主体） */}

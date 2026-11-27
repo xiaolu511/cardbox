@@ -3,6 +3,7 @@
 :root {
   --custom-primary: #2563eb; 
   --custom-bg: #f8fafc;
+  --custom-app: #f8fafc;      /* 第一层：背景/桌面 */
   --custom-sidebar: #ffffff;
   --custom-card: #ffffff;
   --custom-text: #1e293b;
@@ -33,20 +34,15 @@
 
 html { font-size: var(--app-font-size); }
 
-html { background-color: var(--custom-bg); }
-
-/* 第一层：壁纸铺在这里，透明度由 --custom-bg-opacity 控制，不盖住内容 */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
+/* 第一层最底下就是这张壁纸（铺满、固定）；上面盖第一层面板（--custom-app），
+   面板有多少透明度，壁纸就露出多少。 */
+html {
+  background-color: var(--custom-bg);
   background-image: var(--custom-bg-image, none);
   background-size: cover;
   background-position: center;
+  background-attachment: fixed;
   background-repeat: no-repeat;
-  opacity: var(--custom-bg-opacity, 1);
-  pointer-events: none;
-  z-index: -1;
 }
 
 body, #root {
@@ -63,7 +59,7 @@ body, #root {
 .font-app { font-family: var(--app-font-family); }
 .text-app { font-size: var(--app-font-size); }
 
-.bg-app { background-color: var(--custom-bg); }
+.bg-app { background-color: var(--custom-app); transition: background-color .25s ease; }
 .bg-sidebar { background-color: var(--custom-sidebar); }
 .bg-card { background-color: var(--custom-card); }
 .text-main { color: var(--custom-text); }
