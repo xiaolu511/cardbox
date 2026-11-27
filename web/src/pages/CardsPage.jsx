@@ -9,6 +9,15 @@ function summarize(text, max = 90) {
   return line.length > max ? `${line.slice(0, max)}…` : line;
 }
 
+// 库里存的是 UTC，直接显示会差 8 小时
+function fmtTime(s) {
+  if (!s) return '';
+  const d = new Date(String(s).replace(' ', 'T') + 'Z');
+  if (Number.isNaN(d.getTime())) return s;
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 function parseTags(raw) {
   try {
     const v = JSON.parse(raw);
@@ -65,7 +74,7 @@ export default function CardsPage({ active = true }) {
   async function loadOverview(catId) {
     try {
       const r = await api('/api/categories/' + catId + '/overview');
-      setOverview({ cards: r.cards || [], todos: r.todos || [], important: r.important || [] });
+      setOverview({ cards: r.cards || [], todos: r.todos || [], important: r.important || [], notes: r.notes || [] });
     } catch (e) { setErr(e.message); }
   }
 
@@ -181,7 +190,7 @@ export default function CardsPage({ active = true }) {
     const map = new Map();
     for (const c of source) {
       const key = c.note_id;
-      if (!map.has(key)) map.set(key, { noteId: key, noteText: c.raw_text || '', cards: [] });
+      if (!map.has(key)) map.set(key, { noteId: key, noteText: c.raw_text || c.note_text || '', cards: [] });
       map.get(key).cards.push(c);
     }
     return [...map.values()];
@@ -456,11 +465,31 @@ export default function CardsPage({ active = true }) {
 
       <div className="space-y-6 bg-card p-6 rounded-2xl shadow-sm border border-app transition-colors duration-300">
 
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { key: 'cards', label: t('知识点'), n: overview.cards.length },
+          { key: 'todos', label: t('待办事项'), n: overview.todos.length },
+          { key: 'important', label: t('重要事项'), n: overview.important.length },
+          { key: 'notes', label: t('笔记'), n: (overview.notes || []).length },
+        ].map((o) => (
+          <button
+            key={o.key}
+            type="button"
+            onClick={() => setTab(o.key)}
+            className={`text-left p-3 rounded-xl border transition-colors ${tab === o.key ? 'border-primary-500 bg-primary-600/5' : 'border-app hover:border-primary-500/40'}`}
+          >
+            <div className="text-xs text-muted">{o.label}</div>
+            <div className="mt-1 text-2xl font-semibold text-main">{o.n}</div>
+          </button>
+        ))}
+      </div>
+
       <div className="flex gap-1 p-1 rounded-xl bg-app border border-app w-fit">
         {[
           { key: 'cards', label: t('知识点') },
           { key: 'todos', label: t('待办事项') },
           { key: 'important', label: t('重要事项') },
+          { key: 'notes', label: t('笔记') },
         ].map((o) => (
           <button
             key={o.key}
@@ -578,6 +607,20 @@ export default function CardsPage({ active = true }) {
           </div>
         )}
       </>)}
+
+      {tab === 'notes' && (
+        <div className="space-y-3">
+          {(overview.notes || []).length === 0 && (
+            <p className="text-sm text-muted py-6 text-center">{t('这个分类里还没有笔记')}</p>
+          )}
+          {(overview.notes || []).map((n) => (
+            <div key={n.id} className="border border-app rounded-xl p-4 bg-app/40">
+              <p className="text-sm text-main whitespace-pre-wrap break-words">{n.raw_text}</p>
+              <p className="mt-2 text-xs text-muted">{fmtTime(n.created_at)}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {tab === 'todos' && (
         <div className="space-y-3">
