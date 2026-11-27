@@ -37,15 +37,20 @@ note text / imported file / split request
 ## Features
 
 - **Notes → cards**: paste text and DeepSeek splits it into Q&A cards; the same card is never generated twice
+- **Set the rules first**: optional analysis instructions (concepts only, skip examples…), thinking depth (fast / standard / deep) and a four-step progress view (read → analyse → classify → write)
 - **File import**: `.txt / .md / .docx / .pdf` (≤10MB each), text lands straight in the editor
 - **Outline first**: optionally condense a long document into key points before generating cards
-- **Card count**: ask for 3/5/8/10 or any custom number of cards
 - **Fold & batch**: long notes collapse to four lines; notes and cards support multi-select, select-all and bulk delete, and notes can be split in bulk
-- **Spaced repetition**: again / hard / good / easy, each with its own next-review date
+- **Your categories, not the AI's**: you create the categories; unclassified notes simply stay unclassified — no phantom "Uncategorised" bucket
+- **Three-layer layout**: primary menu in the title bar, secondary panel on the left (Cards / Review + categories), content panel on the right — an overview strip plus Knowledge / To-dos / Important / Notes tabs
+- **To-dos & important items**: pulled out of notes during analysis; to-dos can be checked off and carry a due date with an early reminder
+- **Spaced repetition**: again / hard / good / easy, each with its own next-review date; the sidebar collapses while you review
+- **Review scope**: limit a session to one category, or drill a single card
 - **Review Center**: due today / reviewed today / mastery, plus a 7-day activity chart. Click any card to see the list and drill those cards again
 - **Full-text search**: SQLite FTS5 trigram index, with automatic LIKE fallback for short Chinese queries
-- **Theming**: 5 presets, four colour pickers and custom fonts, applied instantly, with one-click reset
+- **Theming**: 5 presets, four colour pickers and custom fonts, plus separate panel-opacity and background-image controls; one-click reset
 - **Font scaling**: 12–24px, applied to the whole UI including inputs
+- **Your data, your location**: move the database to another folder, or wipe everything with "format the app" (account and local settings included)
 - **Update check**: reads the latest GitHub Release and only prompts when it is newer than your build
 - **Local first**: one SQLite file, API key never leaves the machine
 
@@ -99,7 +104,9 @@ preload.cjs         Minimal window-control bridge via contextBridge
 server/src/         Fastify service: auth, notes, cards, review, search, settings, import
 server/src/extract.js  txt / md / docx / pdf to plain text
 web/src/            React frontend: notes / cards / review / settings / about
-web/src/theme.js    Single entry point for theme and custom fonts (all CSS variables are set here)
+web/src/theme.js    Single entry point for theme, fonts, wallpaper and opacities
+web/src/switchAnim.js  Direction-aware page/tab transitions
+web/src/modalAnim.js   Modal enter/exit animations and last-value retention
 web/src/i18n.js     Translations: zh-CN / zh-TW / en
 build/icon.ico      App icon
 ```
@@ -109,9 +116,12 @@ build/icon.ico      App icon
 The packaged build keeps its database and JWT secret in `%APPDATA%\Cardbox\`:
 
 ```
-cardbox.db       SQLite database (notes, cards, review log, API key)
+cardbox.db       SQLite database (notes, cards, review log, to-dos, important items, API key)
 jwt-secret       Random per-machine signing key, generated on first launch
+data-dir.json    Only present after you move the database, remembers the custom folder
 ```
+
+Settings → Storage shows the current database path and lets you move it to another drive; the database is copied over and applied on restart. "Format the app" on the same page deletes the database, the secret and local settings — the equivalent of a clean reinstall.
 
 In development mode the database goes to `server/data/`; set `DB_DIR` to move it elsewhere.
 
