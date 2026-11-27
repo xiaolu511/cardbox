@@ -15,6 +15,17 @@ export const LANGS = [
 ];
 
 const TW = {
+  "知识点": "知識點",
+  "待办事项": "待辦事項",
+  "重要事项": "重要事項",
+  "还没有待办，分析笔记时会自动提取。": "還沒有待辦，分析筆記時會自動提取。",
+  "截止 {d}": "截止 {d}",
+  "没有截止时间": "沒有截止時間",
+  "提前 {n} 分钟提醒": "提前 {n} 分鐘提醒",
+  "标记完成": "標記完成",
+  "还没有重要事项。": "還沒有重要事項。",
+  "记下 {n} 条待办": "記下 {n} 條待辦",
+  "标记 {n} 条重要事项": "標記 {n} 條重要事項",
   "导入到分类": "匯入到分類",
   "自动判断（由 AI 归类）": "自動判斷（由 AI 歸類）",
   "＋ 新建分类…": "＋ 新建分類…",
@@ -224,6 +235,17 @@ const TW = {
 };
 
 const EN = {
+  "知识点": "Knowledge",
+  "待办事项": "To-dos",
+  "重要事项": "Important",
+  "还没有待办，分析笔记时会自动提取。": "No to-dos yet — they are extracted when a note is analysed.",
+  "截止 {d}": "Due {d}",
+  "没有截止时间": "No due date",
+  "提前 {n} 分钟提醒": "remind {n} min before",
+  "标记完成": "Mark done",
+  "还没有重要事项。": "No important items yet.",
+  "记下 {n} 条待办": "{n} to-do(s) saved",
+  "标记 {n} 条重要事项": "{n} important item(s) flagged",
   "导入到分类": "Import into category",
   "自动判断（由 AI 归类）": "Auto (decided by AI)",
   "＋ 新建分类…": "+ New category…",

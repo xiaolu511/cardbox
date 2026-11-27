@@ -28,6 +28,26 @@ export default function CardsPage({ active = true }) {
   const [batchMode, setBatchMode] = useState(false);
   const [sel, setSel] = useState(() => new Set());
   const [batchBusy, setBatchBusy] = useState(false);
+  // 三种视图：知识点 / 待办 / 重要事项
+  const [tab, setTab] = useState('cards');
+  const [overview, setOverview] = useState({ todos: [], important: [] });
+
+  async function loadOverview() {
+    try {
+      const r = await api('/api/categories/all/overview');
+      setOverview({ todos: r.todos || [], important: r.important || [] });
+    } catch { /* 忽略：切回卡片页时会有自己的错误提示 */ }
+  }
+
+  async function toggleTodo(item) {
+    const next = item.status === 'done' ? 'open' : 'done';
+    setOverview((o) => ({ ...o, todos: o.todos.map((x) => (x.id === item.id ? { ...x, status: next } : x)) }));
+    try {
+      await api('/api/todos/' + item.id, { method: 'PATCH', body: { status: next } });
+    } catch {
+      await loadOverview();
+    }
+  }
 
   async function load(keyword = '', reset = false) {
     if (busyRef.current) return;
@@ -55,6 +75,10 @@ export default function CardsPage({ active = true }) {
   }
 
   useEffect(() => { if (active) load('', true); }, [active]);
+  useEffect(() => {
+    if (!active || tab === 'cards') return;
+    loadOverview();
+  }, [active, tab]);
 
   // 按 note_id 分组，保持接口给的顺序（新的在前）
   const groups = useMemo(() => {
@@ -139,6 +163,22 @@ export default function CardsPage({ active = true }) {
 
   return (
     <div className="space-y-6 bg-card p-6 rounded-2xl shadow-sm border border-app transition-colors duration-300">
+      <div className="flex gap-1 p-1 rounded-xl bg-app border border-app w-fit">
+        {[
+          { key: 'cards', label: t('知识点') },
+          { key: 'todos', label: t('待办事项') },
+          { key: 'important', label: t('重要事项') },
+        ].map((o) => (
+          <button
+            key={o.key}
+            type="button"
+            onClick={() => setTab(o.key)}
+            className={`px-4 py-1.5 rounded-lg text-sm transition-colors ${tab === o.key ? 'bg-card text-main font-medium shadow-sm' : 'text-muted hover:text-main'}`}
+          >{o.label}</button>
+        ))}
+      </div>
+
+      {tab === 'cards' && (<>
       <form onSubmit={(e) => { e.preventDefault(); load(q, true); }} className="flex gap-2">
         <input
           value={q} onChange={(e) => setQ(e.target.value)}
@@ -274,6 +314,52 @@ export default function CardsPage({ active = true }) {
           >
             {loading ? t('加载中...') : t('加载更多')}
           </button>
+        </div>
+      )}
+
+      </>)}
+
+      {tab === 'todos' && (
+        <div className="space-y-3">
+          {overview.todos.length === 0 && (
+            <div className="py-16 text-center text-muted text-sm">{t('还没有待办，分析笔记时会自动提取。')}</div>
+          )}
+          {overview.todos.map((item) => (
+            <div
+              key={item.id}
+              className={`flex items-start gap-3 p-4 rounded-xl border transition-colors ${item.status === 'done' ? 'border-app bg-app/40' : 'border-app bg-card hover:border-primary-500/40'}`}
+            >
+              <button
+                type="button"
+                onClick={() => toggleTodo(item)}
+                className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${item.status === 'done' ? 'bg-primary-600 border-primary-600 text-white' : 'border-app text-transparent hover:border-primary-500'}`}
+                aria-label={t('标记完成')}
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
+              </button>
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm ${item.status === 'done' ? 'line-through text-muted' : 'text-main'}`}>{item.title}</p>
+                <p className="text-xs text-muted mt-1">
+                  {item.due_at ? t('截止 {d}', { d: String(item.due_at).slice(0, 16).replace('T', ' ') }) : t('没有截止时间')}
+                  {item.remind_before ? ` · ${t('提前 {n} 分钟提醒', { n: item.remind_before })}` : ''}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {tab === 'important' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {overview.important.length === 0 && (
+            <div className="md:col-span-2 py-16 text-center text-muted text-sm">{t('还没有重要事项。')}</div>
+          )}
+          {overview.important.map((item) => (
+            <div key={item.id} className="border border-app rounded-xl p-5 bg-card space-y-2">
+              <p className="text-sm font-medium text-main">{item.title}</p>
+              {item.detail && <p className="text-sm text-muted whitespace-pre-wrap">{item.detail}</p>}
+            </div>
+          ))}
         </div>
       )}
 

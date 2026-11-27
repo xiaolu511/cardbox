@@ -151,7 +151,7 @@ export default function NotesPage({ active = true }) {
     const list = Array.isArray(ids) ? ids : [ids];
     setErr('');
     setProgress({ open: true, step: 0, idx: 1, total: list.length, category: '', error: '', done: false, result: null });
-    let cards = 0;
+    let cards = 0, todos = 0, importants = 0;
     try {
       for (let i = 0; i < list.length; i++) {
         const id = list[i];
@@ -182,19 +182,26 @@ export default function NotesPage({ active = true }) {
           const r = await api(`/api/notes/${id}/apply`, {
             method: 'POST',
             body: {
-              analysis: { cards: analysis.cards || [], summary: analysis.summary || '' },
+              analysis: {
+                cards: analysis.cards || [],
+                todos: analysis.todos || [],
+                important: analysis.important || [],
+                summary: analysis.summary || '',
+              },
               categoryId: catChoice !== 'auto' && catChoice !== 'new' ? Number(catChoice) : undefined,
               categoryName: catChoice === 'new' ? newCatName.trim() || undefined : undefined,
             },
           });
           cards += (r.created && r.created.cards) || 0;
+          todos += (r.created && r.created.todos) || 0;
+          importants += (r.created && r.created.important) || 0;
         } catch (e) {
           setProgress((p) => ({ ...p, error: e.message }));
           return;
         }
         setProgress((p) => ({ ...p, step: 4 }));
       }
-      setProgress((p) => ({ ...p, done: true, result: { cards } }));
+      setProgress((p) => ({ ...p, done: true, result: { cards, todos, importants } }));
       await load(true);
     } finally {
       setSplitTarget(null);
@@ -464,7 +471,15 @@ export default function NotesPage({ active = true }) {
                 <p className="text-sm text-red-500 pl-9">{progress.error}</p>
               )}
               {progress.done && (
-                <p className="text-sm text-main pl-9">{t('生成 {n} 张卡片', { n: (progress.result && progress.result.cards) || 0 })}</p>
+                <div className="text-sm text-main pl-9 space-y-1">
+                  <p>{t('生成 {n} 张卡片', { n: (progress.result && progress.result.cards) || 0 })}</p>
+                  {!!(progress.result && progress.result.todos) && (
+                    <p>{t('记下 {n} 条待办', { n: progress.result.todos })}</p>
+                  )}
+                  {!!(progress.result && progress.result.importants) && (
+                    <p>{t('标记 {n} 条重要事项', { n: progress.result.importants })}</p>
+                  )}
+                </div>
               )}
             </div>
             <div className="px-5 py-4 border-t border-app flex justify-end">
