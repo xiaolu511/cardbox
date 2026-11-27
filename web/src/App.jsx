@@ -9,12 +9,14 @@ import { upload } from './api';
 import LoginPage from './pages/LoginPage';
 import NotesPage from './pages/NotesPage';
 import CardsPage from './pages/CardsPage';
+import { useSwitchClass } from './switchAnim';
 import SettingsPage from './pages/SettingsPage';
 
 export default function App() {
   useI18n(); // 订阅语言变化，切换后整棵树重渲染
   const [token, _setToken] = useState(getToken());
   const [tab, setTab] = useState('notes');
+  const pageDir = useSwitchClass(tab, ['notes', 'cards', 'settings'], 'x').replace('switch-', 'dir-');
   const [updateReady, setUpdateReady] = useState(null); // { latestVersion } | null
   const [dragging, setDragging] = useState(false);
   const [dropErr, setDropErr] = useState('');
@@ -154,7 +156,7 @@ export default function App() {
       <div className="flex-1 flex overflow-hidden">
 
 
-        <main className="flex-1 flex flex-col relative overflow-hidden bg-app transition-colors duration-300">
+        <main className={`flex-1 flex flex-col relative overflow-hidden bg-app transition-colors duration-300 ${pageDir}`}>
           <div className="flex-1 overflow-y-auto px-6 py-6 z-10 [scrollbar-gutter:stable]">
              {!token ? (
                <div className="h-full flex justify-center items-center pb-20">

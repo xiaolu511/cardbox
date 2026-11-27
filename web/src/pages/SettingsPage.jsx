@@ -4,6 +4,7 @@ import AboutPage from './AboutPage';
 import { applyTheme, readTheme, saveTheme, getContrastColor, importCustomFont, resetTheme } from '../theme';
 import { t, useI18n, setLang, getLang, LANGS } from '../i18n';
 import { STRICTNESS_OPTIONS, getStrictness, setStrictness } from '../judgePrefs';
+import { useSwitchClass } from '../switchAnim';
 
 const PRESETS = [
   { name: '经典亮色', primary: '#2563eb', bg: '#f8fafc', sidebar: '#ffffff', card: '#ffffff' },
@@ -16,6 +17,7 @@ const PRESETS = [
 export default function SettingsPage({ active = true }) {
   useI18n();
   const [sec, setSec] = useState('ai');
+  const secCls = useSwitchClass(sec, ['ai', 'personal', 'storage', 'about'], 'y');
 
   // 换二级菜单时把内容拉回顶部，并保证高度不塌，避免整页跟着跳
   // 用 layout effect：在绘制前回顶，避免先画旧位置再跳一下
@@ -102,7 +104,7 @@ export default function SettingsPage({ active = true }) {
         <div className="flex-1 min-w-0 space-y-6 min-h-[520px]">
 
       {/* AI 引擎 */}
-      <div className={`bg-card rounded-xl shadow-sm border border-app overflow-hidden ${sec === 'ai' ? '' : 'hidden'}`}>
+      <div className={`bg-card rounded-xl shadow-sm border border-app overflow-hidden ${sec === 'ai' ? '' : 'hidden'} ${secCls}`}>
         <div className="px-6 py-4 border-b border-app bg-black/5">
           <h3 className="font-bold text-primary-600">{t('AI 引擎 (API)')}</h3>
         </div>
@@ -127,7 +129,7 @@ export default function SettingsPage({ active = true }) {
       </div>
 
       {/* 语言 */}
-      <div className={`bg-card rounded-xl shadow-sm border border-app overflow-hidden ${sec === 'personal' ? '' : 'hidden'}`}>
+      <div className={`bg-card rounded-xl shadow-sm border border-app overflow-hidden ${sec === 'personal' ? '' : 'hidden'} ${secCls}`}>
         <div className="px-6 py-4 border-b border-app bg-black/5">
           <h3 className="font-bold text-primary-600">{t('界面语言')}</h3>
         </div>
@@ -147,7 +149,7 @@ export default function SettingsPage({ active = true }) {
         </div>
       </div>
       {/* AI 判定严格度 */}
-      <div className={`bg-card rounded-xl shadow-sm border border-app overflow-hidden ${sec === 'ai' ? '' : 'hidden'}`}>
+      <div className={`bg-card rounded-xl shadow-sm border border-app overflow-hidden ${sec === 'ai' ? '' : 'hidden'} ${secCls}`}>
         <div className="px-6 py-4 border-b border-app bg-black/5">
           <h3 className="font-bold text-primary-600">{t('AI 判定严格度')}</h3>
         </div>
@@ -168,7 +170,7 @@ export default function SettingsPage({ active = true }) {
       </div>
 
       {/* 主题外观 */}
-      <div className={`bg-card rounded-xl shadow-sm border border-app overflow-hidden ${sec === 'personal' ? '' : 'hidden'}`}>
+      <div className={`bg-card rounded-xl shadow-sm border border-app overflow-hidden ${sec === 'personal' ? '' : 'hidden'} ${secCls}`}>
         <div className="px-6 py-4 border-b border-app bg-black/5">
           <div className="flex items-center gap-3">
             <h3 className="font-bold text-primary-600">{t('主题与外观')}</h3>
@@ -252,7 +254,7 @@ export default function SettingsPage({ active = true }) {
           </div>
         </div>
       </div>
-        <div className={`space-y-6 ${sec === 'storage' ? '' : 'hidden'}`}>
+        <div className={`space-y-6 ${sec === 'storage' ? '' : 'hidden'} ${secCls}`}>
           <div className="bg-card rounded-xl shadow-sm border border-app overflow-hidden">
             <div className="px-6 py-4 border-b border-app bg-black/5">
               <h3 className="font-bold text-primary-600">{t('数据存储')}</h3>
@@ -283,7 +285,7 @@ export default function SettingsPage({ active = true }) {
           </div>
         </div>
 
-        <div className={`${sec === 'about' ? '' : 'hidden'}`}>
+        <div className={`${sec === 'about' ? '' : 'hidden'} ${secCls}`}>
           <AboutPage />
         </div>
         </div>

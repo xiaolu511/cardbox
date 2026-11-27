@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '../api';
 import ReviewPage from './ReviewPage';
+import { useSwitchClass } from '../switchAnim';
 import { t, useI18n, getLang } from '../i18n';
 
 // 一条笔记的摘要：取原文首行，太长就截断
@@ -54,7 +55,9 @@ export default function CardsPage({ active = true }) {
 
   // 分类详情（知识点 / 待办 / 重要事项）
   const [overview, setOverview] = useState({ cards: [], todos: [], important: [] });
-  const [view, setView] = useState('cards'); // cards | review
+  const [view, setView] = useState('cards');
+  const viewCls = useSwitchClass(view, ['cards', 'review'], 'x');
+  const tabCls = useSwitchClass(tab, ['cards', 'todos', 'important', 'notes'], 'x'); // cards | review
 
   // 新建分类 / 管理分类里的笔记
   const [newCatOpen, setNewCatOpen] = useState(false);
@@ -344,7 +347,7 @@ export default function CardsPage({ active = true }) {
 
   if (view === 'review') {
     return (
-      <div className="space-y-4 animate-detail">
+      <div className={`space-y-4 ${viewCls || 'animate-detail'}`}>
         <div className="flex gap-6 items-start">
           {rail}
           <div className="flex-1 min-w-0">
@@ -361,7 +364,7 @@ export default function CardsPage({ active = true }) {
 
   // ================= 分类详情 =================
   return (
-    <div className="space-y-4 animate-detail">
+    <div className={`space-y-4 ${viewCls || 'animate-detail'}`}>
       <div className="flex gap-6 items-start">
         {rail}
         <div className="flex-1 min-w-0 space-y-4">
@@ -406,6 +409,7 @@ export default function CardsPage({ active = true }) {
         ))}
       </div>
 
+      <div key={tab} className={tabCls}>
       {tab === 'cards' && (<>
         {isAll && (
           <form onSubmit={(e) => { e.preventDefault(); load(q, true); }} className="flex gap-2">
@@ -588,7 +592,9 @@ export default function CardsPage({ active = true }) {
           ))}
         </div>
       )}
-        {newCatOpen && createPortal(
+        </div>
+
+      {newCatOpen && createPortal(
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6">
             <div className="w-full max-w-sm bg-card border border-app rounded-2xl shadow-2xl overflow-hidden">
               <div className="px-5 pt-5 pb-3">
