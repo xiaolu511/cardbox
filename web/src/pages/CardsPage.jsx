@@ -57,7 +57,10 @@ export default function CardsPage({ active = true }) {
   const [overview, setOverview] = useState({ cards: [], todos: [], important: [] });
   const [view, setView] = useState('cards');
   const viewCls = useSwitchClass(view, ['cards', 'review'], 'x');
-  const tabCls = useSwitchClass(tab, ['cards', 'todos', 'important', 'notes'], 'x'); // cards | review
+  const tabCls = useSwitchClass(tab, ['cards', 'todos', 'important', 'notes'], 'x');
+  // 左栏分类是竖排的，切分类走上下动画
+  const catOrder = useMemo(() => ['all', ...cats.map((c) => String(c.id))], [cats]);
+  const catCls = useSwitchClass(String(activeCat.id), catOrder, 'y');
 
   // 新建分类 / 管理分类里的笔记
   const [newCatOpen, setNewCatOpen] = useState(false);
@@ -367,7 +370,7 @@ export default function CardsPage({ active = true }) {
     <div className={`space-y-4 ${viewCls || 'animate-detail'}`}>
       <div className="flex gap-6 items-start">
         {rail}
-        <div className="flex-1 min-w-0 space-y-4">
+        <div key={activeCat.id} className={`flex-1 min-w-0 space-y-4 ${catCls}`}>
       <div className="flex items-center gap-3">
         <h2 className="font-bold text-main">{activeCat.id === 'all' ? t('全部') : activeCat.name}</h2>
       </div>

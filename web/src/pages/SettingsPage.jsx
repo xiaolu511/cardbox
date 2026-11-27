@@ -286,7 +286,7 @@ export default function SettingsPage({ active = true }) {
         </div>
 
         <div className={`${sec === 'about' ? '' : 'hidden'} ${secCls}`}>
-          <AboutPage />
+          <AboutPage embedded />
         </div>
         </div>
       </div>

@@ -4,7 +4,7 @@ import witchInk from '../assets/witch-ink.webp';
 import { t, useI18n } from '../i18n';
 import { CURRENT_VERSION, compareVersions, fetchLatestRelease } from '../update';
 
-export default function AboutPage() {
+export default function AboutPage({ embedded = false }) {
   useI18n();
   const [updateState, setUpdateState] = useState('idle'); // idle | loading | latest | update_available | error
   const [updateInfo, setUpdateInfo] = useState(null);
@@ -36,7 +36,7 @@ export default function AboutPage() {
   };
 
   return (
-    <div className="max-w-3xl lg:max-w-4xl xl:max-w-5xl mx-auto animate-page">
+    <div className={`mx-auto ${embedded ? 'max-w-none' : 'max-w-3xl lg:max-w-4xl xl:max-w-5xl animate-page'}`}>
       <div className="bg-card rounded-2xl shadow-sm border border-app overflow-hidden transition-colors duration-300">
         
         {/* 头部横幅区 */}
