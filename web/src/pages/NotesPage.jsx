@@ -441,7 +441,6 @@ export default function NotesPage({ active = true }) {
                     className="mt-2 w-full px-3 py-2 rounded-lg border border-app bg-app text-sm text-main"
                   />
                 )}
-                <p className="text-xs text-muted mt-1.5">{t('分类由你自己决定，AI 不会替你归类。')}</p>
               </div>
             </div>
             <div className="px-5 py-4 border-t border-app flex justify-end gap-3">

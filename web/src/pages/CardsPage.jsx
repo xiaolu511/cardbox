@@ -188,7 +188,6 @@ export default function CardsPage({ active = true }) {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-main">{t('分类')}</h2>
-          <button onClick={loadCats} className="text-sm text-muted hover:text-main transition-colors">{t('刷新')}</button>
         </div>
         {catErr && <p className="text-red-500 text-sm">{catErr}</p>}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -200,7 +199,7 @@ export default function CardsPage({ active = true }) {
             <p className="text-sm font-medium text-main">{t('全部')}</p>
             <p className="text-xs text-muted mt-1">{t('{n} 张卡片', { n: total })}</p>
           </button>
-          {cats.filter((c) => (c.cardCount || 0) + (c.todoCount || 0) + (c.importantCount || 0) > 0).map((c) => (
+          {cats.map((c) => (
             <button
               key={c.id}
               type="button"
@@ -239,7 +238,7 @@ export default function CardsPage({ active = true }) {
 
   // ================= 分类详情 =================
   return (
-    <div className="space-y-6 bg-card p-6 rounded-2xl shadow-sm border border-app transition-colors duration-300">
+    <div className="space-y-4">
       <div className="flex items-center gap-3">
         <button
           onClick={() => { setActiveCat(null); setTab('cards'); }}
@@ -262,6 +261,8 @@ export default function CardsPage({ active = true }) {
           {batchMode ? t('取消') : t('删除')}
         </button>
       </div>
+
+      <div className="space-y-6 bg-card p-6 rounded-2xl shadow-sm border border-app transition-colors duration-300">
 
       <div className="flex gap-1 p-1 rounded-xl bg-app border border-app w-fit">
         {[
@@ -494,6 +495,7 @@ export default function CardsPage({ active = true }) {
         document.body
       )}
     </div>
+      </div>
   );
 }
 
