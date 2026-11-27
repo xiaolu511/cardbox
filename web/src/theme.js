@@ -10,7 +10,8 @@ export const THEME_DEFAULTS = {
   card: '#ffffff',
   fontSize: '16px',
   fontFamily: '系统默认',
-  opacity: 100,          // 面板不透明度（%），100 = 实心
+  bgOpacity: 60,         // 背景图不透明度（%）：第一层，越低壁纸越淡
+  panelOpacity: 100,     // 面板不透明度（%）：第二层左栏 + 第三层主体
   backgroundImage: '',   // 背景图 dataURL，空 = 纯色
 };
 
@@ -26,7 +27,8 @@ const KEYS = {
   fontSize: 'cardbox-fontsize',
   fontFamily: 'cardbox-fontfamily',
   customFont: 'cardbox-customfont',
-  opacity: 'cardbox-opacity',
+  panelOpacity: 'cardbox-opacity',   // 沿用旧键，老用户的面板值不会丢
+  bgOpacity: 'cardbox-bgopacity',
   backgroundImage: 'cardbox-bgimage',
 };
 
@@ -50,7 +52,8 @@ export function readTheme() {
     card: read(KEYS.card, THEME_DEFAULTS.card),
     fontSize: read(KEYS.fontSize, THEME_DEFAULTS.fontSize),
     fontFamily: read(KEYS.fontFamily, THEME_DEFAULTS.fontFamily),
-    opacity: Number(read(KEYS.opacity, THEME_DEFAULTS.opacity)) || 100,
+    panelOpacity: Number(read(KEYS.panelOpacity, THEME_DEFAULTS.panelOpacity)) || 100,
+    bgOpacity: Number(read(KEYS.bgOpacity, THEME_DEFAULTS.bgOpacity)) || 60,
     backgroundImage: read(KEYS.backgroundImage, ''),
   };
 }
@@ -65,7 +68,8 @@ export function saveTheme(theme) {
   write(KEYS.card, theme.card);
   write(KEYS.fontSize, theme.fontSize);
   write(KEYS.fontFamily, theme.fontFamily);
-  write(KEYS.opacity, String(theme.opacity ?? THEME_DEFAULTS.opacity));
+  write(KEYS.panelOpacity, String(theme.panelOpacity ?? THEME_DEFAULTS.panelOpacity));
+  write(KEYS.bgOpacity, String(theme.bgOpacity ?? THEME_DEFAULTS.bgOpacity));
   write(KEYS.backgroundImage, theme.backgroundImage || '');
 }
 
@@ -77,15 +81,16 @@ export function fontFamilyToCss(fontFamily) {
 // 一次把全部变量刷到 :root —— 这是修「切主题只改一半」的地方
 export function applyTheme(theme) {
   const { primary, bg, sidebar, card, fontSize, fontFamily } = theme;
-  const opacity = Math.min(100, Math.max(20, Number(theme.opacity) || 100));
+  const panelOpacity = Math.min(100, Math.max(20, Number(theme.panelOpacity) || 100));
+  const bgOpacity = Math.min(100, Math.max(0, Number(theme.bgOpacity) ?? 60));
   const style = document.documentElement.style;
   const isDark = getContrastColor(bg) === '#f8fafc';
 
   style.setProperty('--custom-primary', primary);
-  // 有背景图时让底色透明，图才透得出来（文字对比度仍按原底色算）
-  style.setProperty('--custom-bg', theme.backgroundImage ? 'transparent' : bg);
-  // 面板半透明：低于 100% 时用 color-mix 掺透明，背景图才能透出来
-  const alpha = (hex) => (opacity >= 100 ? hex : `color-mix(in srgb, ${hex} ${opacity}%, transparent)`);
+  // 第一层是底色；壁纸单独铺在它上面（body::before），所以底色保持实心
+  style.setProperty('--custom-bg', bg);
+  // 第二/三层（左栏 + 主体）半透明：低于 100% 时掺透明，壁纸才能透出来
+  const alpha = (hex) => (panelOpacity >= 100 ? hex : `color-mix(in srgb, ${hex} ${panelOpacity}%, transparent)`);
   style.setProperty('--custom-sidebar', alpha(sidebar));
   style.setProperty('--custom-card', alpha(card));
   style.setProperty('--custom-text', isDark ? '#f8fafc' : '#1e293b');
@@ -103,17 +108,9 @@ export function applyTheme(theme) {
     isDark ? primary : `color-mix(in srgb, ${primary} 80%, black)`
   );
   style.setProperty('--app-font-size', fontSize);
-  // 背景图铺满、固定，页面滚动时不动
-  const body = document.body;
-  if (theme.backgroundImage) {
-    body.style.backgroundImage = `url(${theme.backgroundImage})`;
-    body.style.backgroundSize = 'cover';
-    body.style.backgroundPosition = 'center';
-    body.style.backgroundAttachment = 'fixed';
-    body.style.backgroundRepeat = 'no-repeat';
-  } else {
-    body.style.backgroundImage = '';
-  }
+  // 壁纸铺在 body::before 上，靠 --custom-bg-opacity 控制它自己的不透明度
+  style.setProperty('--custom-bg-image', theme.backgroundImage ? `url(${theme.backgroundImage})` : 'none');
+  style.setProperty('--custom-bg-opacity', bgOpacity / 100);
   style.setProperty('--app-font-family', fontFamilyToCss(fontFamily));
 }
 

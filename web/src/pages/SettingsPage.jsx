@@ -86,7 +86,8 @@ export default function SettingsPage({ active = true }) {
   };
 
   const changeFontSize = (e) => update({ fontSize: `${parseInt(e.target.value)}px` });
-  const changeOpacity = (e) => update({ opacity: parseInt(e.target.value) });
+  const changePanelOpacity = (e) => update({ panelOpacity: parseInt(e.target.value) });
+  const changeBgOpacity = (e) => update({ bgOpacity: parseInt(e.target.value) });
 
   const handleBgUpload = (e) => {
     const file = e.target.files[0];
@@ -306,15 +307,27 @@ export default function SettingsPage({ active = true }) {
             />
           </div>
 
-          {/* 面板不透明度 */}
+          {/* 背景不透明度（第一层） */}
           <div className="flex items-center gap-6 pt-6 border-t border-app">
-            <p className="w-32 text-sm text-main shrink-0 font-medium">{t('面板不透明度 ({n}%)', { n: theme.opacity })}</p>
+            <p className="w-32 text-sm text-main shrink-0 font-medium">{t('背景不透明度 ({n}%)', { n: theme.bgOpacity ?? 60 })}</p>
+            <input
+              type="range" min="0" max="100" step="5"
+              value={theme.bgOpacity ?? 60} onChange={changeBgOpacity}
+              disabled={!theme.backgroundImage}
+              className="flex-1 max-w-xs accent-primary-600 disabled:opacity-40"
+            />
+            <span className="text-xs text-muted">{theme.backgroundImage ? t('第一层：壁纸的浓淡') : t('先导入背景图')}</span>
+          </div>
+
+          {/* 面板不透明度（第二层左栏 + 第三层主体） */}
+          <div className="flex items-center gap-6">
+            <p className="w-32 text-sm text-main shrink-0 font-medium">{t('面板不透明度 ({n}%)', { n: theme.panelOpacity ?? 100 })}</p>
             <input
               type="range" min="30" max="100" step="5"
-              value={theme.opacity ?? 100} onChange={changeOpacity}
+              value={theme.panelOpacity ?? 100} onChange={changePanelOpacity}
               className="flex-1 max-w-xs accent-primary-600"
             />
-            <span className="text-xs text-muted">{t('调低会让背景透出来')}</span>
+            <span className="text-xs text-muted">{t('第二、三层：左栏和主体')}</span>
           </div>
 
           {/* 背景图片 */}
