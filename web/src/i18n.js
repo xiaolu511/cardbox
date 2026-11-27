@@ -15,6 +15,7 @@ export const LANGS = [
 ];
 
 const TW = {
+  "还没有配置 API Key，先去「设置」填上再拆卡。": "還沒有設定 API Key，先去「設定」填上再拆卡。",
   "分类": "分類",
   "刷新": "重新整理",
   "全部分类": "全部分類",
@@ -242,6 +243,7 @@ const TW = {
 };
 
 const EN = {
+  "还没有配置 API Key，先去「设置」填上再拆卡。": "No API key yet — add one in Settings before splitting.",
   "分类": "Categories",
   "刷新": "Refresh",
   "全部分类": "All categories",

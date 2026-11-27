@@ -51,6 +51,8 @@ export default function NotesPage({ active = true }) {
   const [useRefine, setUseRefine] = useState(false); // 保存前先让 AI 精简一遍
   const [refining, setRefining] = useState(false);
   const [importMsg, setImportMsg] = useState('');
+  // 没配 Key 时不让拆卡，点了给提示而不是直接走 Mock
+  const [hasKey, setHasKey] = useState(null);
   const fileRef = useRef(null);
   // 批量模式
   const [batchMode, setBatchMode] = useState(false);
@@ -63,6 +65,11 @@ export default function NotesPage({ active = true }) {
     return next;
   });
   const [batchBusy, setBatchBusy] = useState(false);
+
+  useEffect(() => {
+    if (!active) return;
+    api('/api/settings').then((r) => setHasKey(Boolean(r && r.hasKey))).catch(() => setHasKey(null));
+  }, [active]);
 
   useEffect(() => {
     if (!splitTarget) return;
@@ -148,6 +155,10 @@ export default function NotesPage({ active = true }) {
   }
 
   async function runAnalysis(ids) {
+    if (hasKey === false) {
+      setErr(t('还没有配置 API Key，先去「设置」填上再拆卡。'));
+      return;
+    }
     const list = Array.isArray(ids) ? ids : [ids];
     setErr('');
     setProgress({ open: true, step: 0, idx: 1, total: list.length, category: '', error: '', done: false, result: null });
@@ -285,7 +296,7 @@ export default function NotesPage({ active = true }) {
               className="px-3 py-2 rounded-lg text-sm text-primary-600 hover:underline disabled:opacity-40"
             >{allSelected ? t('取消全选') : t('全选')}</button>
             <button
-              onClick={() => { if (sel.size) { setAnalysisForm({ instruction: '', thinking: 'standard' }); setSplitTarget({ ids: [...sel] }); } }}
+              onClick={() => { if (sel.size) { if (hasKey === false) { setErr(t('还没有配置 API Key，先去「设置」填上再拆卡。')); return; } setAnalysisForm({ instruction: '', thinking: 'standard' }); setSplitTarget({ ids: [...sel] }); } }}
               disabled={sel.size === 0 || batchBusy}
               className="px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors disabled:opacity-40"
             >{t('批量拆卡')}</button>
@@ -338,9 +349,9 @@ export default function NotesPage({ active = true }) {
                   <div className="ml-auto flex gap-4">
                     <button onClick={(e) => { e.stopPropagation(); del(n.id); }} className="text-muted hover:text-red-500 transition-colors">{t('删除')}</button>
                     <button
-                      onClick={(e) => { e.stopPropagation(); setAnalysisForm({ instruction: '', thinking: 'standard' }); setSplitTarget({ ids: [n.id] }); }}
+                      onClick={(e) => { e.stopPropagation(); if (hasKey === false) { setErr(t('还没有配置 API Key，先去「设置」填上再拆卡。')); return; } setAnalysisForm({ instruction: '', thinking: 'standard' }); setSplitTarget({ ids: [n.id] }); }}
                       disabled={busyId === n.id || busyId === 'batch'}
-                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-primary-600 text-white text-sm font-medium shadow-sm hover:bg-primary-700 active:scale-[0.98] transition-all disabled:opacity-50 disabled:active:scale-100"
+                      className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-white text-sm font-medium shadow-sm transition-all ${hasKey === false ? 'bg-primary-600/40 cursor-not-allowed' : 'bg-primary-600 hover:bg-primary-700 active:scale-[0.98]'} disabled:opacity-50`}
                     >
                       {busyId === n.id ? t('AI 拆卡中...') : t('✨ 拆成卡片')}
                     </button>
@@ -424,7 +435,7 @@ export default function NotesPage({ active = true }) {
                 type="button"
                 onClick={() => runAnalysis(splitTarget.ids)}
                 disabled={busyId !== null}
-                className="px-4 py-2 rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors disabled:opacity-50"
+                className={`px-4 py-2 rounded-lg text-white transition-colors disabled:opacity-50 ${hasKey === false ? 'bg-primary-600/40 cursor-not-allowed' : 'bg-primary-600 hover:bg-primary-700'}`}
               >{t('开始分析')}</button>
             </div>
           </div>
