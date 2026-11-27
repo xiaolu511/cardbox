@@ -293,7 +293,7 @@ export default function CardsPage({ active = true }) {
   );
 
   const rail = (
-    <aside className="w-52 shrink-0 space-y-1 hidden md:block">
+    <aside className="w-52 shrink-0 space-y-1 hidden md:block sticky top-0 self-start">
           <div className="pb-2">{viewSwitch}</div>
           <button
         type="button"
@@ -348,7 +348,7 @@ export default function CardsPage({ active = true }) {
         <div className="flex gap-6 items-start">
           {rail}
           <div className="flex-1 min-w-0">
-            <ReviewPage active={active} />
+            <ReviewPage active={active} categoryId={activeCat.id} />
           </div>
         </div>
       </div>
@@ -369,7 +369,7 @@ export default function CardsPage({ active = true }) {
         <h2 className="font-bold text-main">{activeCat.id === 'all' ? t('全部') : activeCat.name}</h2>
       </div>
 
-      <div className="space-y-6 bg-card p-6 rounded-2xl shadow-sm border border-app transition-colors duration-300">
+      <div className="space-y-6 bg-card p-6 rounded-2xl shadow-sm border border-app transition-colors duration-300 min-h-[520px]">
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[

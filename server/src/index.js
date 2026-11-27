@@ -75,7 +75,7 @@ const auth = async (req, reply) => {
 // ========== 笔记管理 ==========
 app.post('/api/notes', { preHandler: auth }, async (req) => {
   const { raw_text } = z.object({ raw_text: z.string().min(1).max(20000) }).parse(req.body);
-  const info = db.prepare('INSERT INTO notes (user_id, raw_text, category_id) VALUES (?, ?, ?)').run(req.user.uid, raw_text, ensureCategory(req.user.uid, '未分类'));
+  const info = db.prepare('INSERT INTO notes (user_id, raw_text, category_id) VALUES (?, ?, ?)').run(req.user.uid, raw_text, null);
   return db.prepare('SELECT * FROM notes WHERE id = ?').get(info.lastInsertRowid);
 });
 
@@ -344,10 +344,8 @@ app.post('/api/notes/:id/apply', { preHandler: auth }, async (req, reply) => {
     const own = db.prepare('SELECT id FROM categories WHERE id = ? AND user_id = ?').get(body.categoryId, req.user.uid);
     if (!own) return reply.code(400).send({ error: '分类不存在' });
     categoryId = own.id;
-  } else {
-    // 分类只能由用户指定；没传就落到「未分类」，不再采用 AI 建议的归类
-  categoryId = pickCategory(req.user.uid, body.categoryName) || ensureCategory(req.user.uid, '未分类');
   }
+  // 分类只由用户指定；没指定就留空（归到「全部」）
 
   const tx = db.transaction(() => {
     let cards = 0, todos = 0, important = 0;
@@ -405,8 +403,8 @@ app.get('/api/categories', { preHandler: auth }, async (req) => {
     '  (SELECT COUNT(*) FROM cards k JOIN notes n ON n.id = k.note_id WHERE n.category_id = c.id) AS cardCount,',
     '  (SELECT COUNT(*) FROM todos t WHERE t.user_id = c.user_id AND t.note_id IN (SELECT id FROM notes WHERE category_id = c.id)) AS todoCount,',
     '  (SELECT COUNT(*) FROM important_items i WHERE i.user_id = c.user_id AND i.note_id IN (SELECT id FROM notes WHERE category_id = c.id)) AS importantCount',
-    'FROM categories c WHERE c.user_id = ? ORDER BY c.name',
-  ].join(' ')).all(req.user.uid);
+    'FROM categories c WHERE c.user_id = ? AND c.name <> ? ORDER BY c.name',
+  ].join(' ')).all(req.user.uid, '未分类');
   // 给每个分类补两条预览，卡片页列表里不用点进去就能看到
   const todoQ = db.prepare([
     'SELECT t.title, t.status FROM todos t',
@@ -509,42 +507,46 @@ app.get('/api/agenda', { preHandler: auth }, async (req) => {
 
 // ========== 学习数据看板 ==========
 app.get('/api/stats', { preHandler: auth }, async (req) => {
+  // 可选：只统计某个分类（复习页左侧选文件夹时用）
+  const cat = req.query.category_id ? Number(req.query.category_id) : null;
+  const catCond = ' AND (? IS NULL OR n.category_id = ?)';
+  const catArgs = [cat, cat];
   // 1. 待复习（今天到期或已过期）
   const { due } = db.prepare(`
     SELECT count(*) as due FROM cards c JOIN notes n ON n.id = c.note_id
-    WHERE n.user_id = ? AND (c.next_review IS NULL OR datetime(c.next_review) <= datetime('now'))
-  `).get(req.user.uid);
+    WHERE n.user_id = ?${catCond} AND (c.next_review IS NULL OR datetime(c.next_review) <= datetime('now'))
+  `).get(req.user.uid, ...catArgs);
 
   // 2. 已掌握：最近一次评分是「记得」或「太简单」。
   //    之前用的是 datetime(next_review) > now+7d，而 easy 的间隔正好是 7 天，
   //    等值永远不通过 → 已掌握恒为 0。按最近一次评分记账更稳定，也不会随日期漂移。
   const { mastered } = db.prepare(`
     SELECT count(*) as mastered FROM cards c JOIN notes n ON n.id = c.note_id
-    WHERE n.user_id = ? AND (
+    WHERE n.user_id = ?${catCond} AND (
       SELECT r.grade FROM review_log r WHERE r.card_id = c.id
       ORDER BY r.graded_at DESC, r.id DESC LIMIT 1
     ) IN ('good', 'easy')
-  `).get(req.user.uid);
+  `).get(req.user.uid, ...catArgs);
 
   // 3. 总卡片数
   const { total } = db.prepare(`
-    SELECT count(*) as total FROM cards c JOIN notes n ON n.id = c.note_id WHERE n.user_id = ?
-  `).get(req.user.uid);
+    SELECT count(*) as total FROM cards c JOIN notes n ON n.id = c.note_id WHERE n.user_id = ?${catCond}
+  `).get(req.user.uid, ...catArgs);
 
   // 4. 今日已复习（本地时区）
   const { todayReviewed } = db.prepare(`
     SELECT count(*) as todayReviewed FROM review_log r
     JOIN cards c ON c.id = r.card_id JOIN notes n ON n.id = c.note_id
-    WHERE n.user_id = ? AND date(r.graded_at, 'localtime') = date('now', 'localtime')
-  `).get(req.user.uid);
+    WHERE n.user_id = ?${catCond} AND date(r.graded_at, 'localtime') = date('now', 'localtime')
+  `).get(req.user.uid, ...catArgs);
 
   // 5. 近 7 天活跃度（本地时区，由后端按天聚合）
   const rows = db.prepare(`
     SELECT date(r.graded_at, 'localtime') as d, count(*) as c FROM review_log r
     JOIN cards c ON c.id = r.card_id JOIN notes n ON n.id = c.note_id
-    WHERE n.user_id = ? AND date(r.graded_at, 'localtime') >= date('now', 'localtime', '-6 days')
+    WHERE n.user_id = ?${catCond} AND date(r.graded_at, 'localtime') >= date('now', 'localtime', '-6 days')
     GROUP BY d
-  `).all(req.user.uid);
+  `).all(req.user.uid, ...catArgs);
   const byDay = new Map(rows.map((r) => [r.d, r.c]));
   const pad = (v) => String(v).padStart(2, '0');
   const last7d = [];
@@ -562,11 +564,12 @@ app.get('/api/stats', { preHandler: auth }, async (req) => {
 app.get('/api/stats/cards', { preHandler: auth }, async (req, reply) => {
   const type = req.query.type || 'due';
   const uid = req.user.uid;
+  const cat = req.query.category_id ? Number(req.query.category_id) : null;
 
   const base = `
     SELECT c.id, c.question, c.answer, c.next_review, c.note_id
     FROM cards c JOIN notes n ON n.id = c.note_id
-    WHERE n.user_id = ?`;
+    WHERE n.user_id = ? AND (? IS NULL OR n.category_id = ?)`;
   // 最近一次评分，用来判断「已掌握」
   const lastGrade = `(SELECT r.grade FROM review_log r WHERE r.card_id = c.id
                       ORDER BY r.graded_at DESC, r.id DESC LIMIT 1)`;
@@ -588,18 +591,30 @@ app.get('/api/stats/cards', { preHandler: auth }, async (req, reply) => {
     return reply.code(400).send({ error: '未知的 type' });
   }
 
-  return db.prepare(sql).all(uid);
+  return db.prepare(sql).all(uid, cat, cat);
 });
 
 // ========== 复习功能 ==========
 app.get('/api/review', { preHandler: auth }, async (req) => {
   const noteId = req.query.note_id;
+  const catId = req.query.category_id ? Number(req.query.category_id) : null;
+  const cardId = req.query.card_id ? Number(req.query.card_id) : null;
   
   let query = `
     SELECT c.* FROM cards c JOIN notes n ON n.id = c.note_id
     WHERE n.user_id = ? AND (c.next_review IS NULL OR datetime(c.next_review) <= datetime('now'))
   `;
   let params = [req.user.uid];
+
+  if (catId) {
+    query += ` AND n.category_id = ?`;
+    params.push(catId);
+  }
+
+  if (cardId) {
+    query += ` AND c.id = ?`;
+    params.push(cardId);
+  }
 
   // 🌟 如果传了 note_id，就只复习这篇笔记里的卡
   if (noteId && noteId !== 'all') {
@@ -634,6 +649,7 @@ app.get('/api/settings', { preHandler: auth }, async (req) => {
   const row = db.prepare('SELECT api_key FROM users WHERE id = ?').get(req.user.uid);
   const key = row?.api_key || '';
   return {
+    dbPath: join(process.env.DB_DIR || join(process.cwd(), 'server', 'data'), 'cardbox.db'),
     hasKey: !!key,
     // 只回显首尾，别把完整 key 发回浏览器
     maskedKey: key ? `${key.slice(0, 5)}****${key.slice(-4)}` : '',
@@ -700,5 +716,15 @@ app.get('/api/version', async (req, reply) => {
     return reply.code(502).send({ error: '无法连接 GitHub 获取版本信息' });
   }
 });
+
+// 历史遗留：把「未分类」里的笔记放回「全部」，再删掉这个分类（用户要求彻底不要它）
+try {
+  const legacy = db.prepare('SELECT id FROM categories WHERE name = ?').all('未分类');
+  for (const c of legacy) {
+    db.prepare('UPDATE notes SET category_id = NULL WHERE category_id = ?').run(c.id);
+    db.prepare('DELETE FROM categories WHERE id = ?').run(c.id);
+  }
+  if (legacy.length) console.log('[migrate] removed legacy 未分类:', legacy.length);
+} catch (e) { console.error('[migrate] 未分类 cleanup failed:', e.message); }
 
 await app.listen({ port: Number(process.env.PORT) || 3000, host: '0.0.0.0' });

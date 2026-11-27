@@ -16,6 +16,13 @@ const PRESETS = [
 export default function SettingsPage({ active = true }) {
   useI18n();
   const [sec, setSec] = useState('ai');
+
+  // 换二级菜单时把内容拉回顶部，并保证高度不塌，避免整页跟着跳
+  useEffect(() => {
+    if (!active) return;
+    const box = document.querySelector('main .overflow-y-auto');
+    if (box) box.scrollTo({ top: 0 });
+  }, [sec, active]);
   const [key, setKey] = useState('');
   const [status, setStatus] = useState({ hasKey: false, maskedKey: '' });
   const [msg, setMsg] = useState('');
@@ -76,7 +83,7 @@ export default function SettingsPage({ active = true }) {
   return (
     <div className="space-y-6 pb-20">
       <div className="flex gap-8 items-start">
-        <aside className="w-44 shrink-0 space-y-1 hidden md:block">
+        <aside className="w-44 shrink-0 space-y-1 hidden md:block sticky top-0 self-start">
           {[
             { id: 'ai', label: t('AI 设置') },
             { id: 'personal', label: t('个性化设置') },
@@ -91,7 +98,7 @@ export default function SettingsPage({ active = true }) {
             >{o.label}</button>
           ))}
         </aside>
-        <div className="flex-1 min-w-0 space-y-6">
+        <div className="flex-1 min-w-0 space-y-6 min-h-[520px]">
 
       {/* AI 引擎 */}
       <div className={`bg-card rounded-xl shadow-sm border border-app overflow-hidden ${sec === 'ai' ? '' : 'hidden'}`}>
@@ -251,7 +258,25 @@ export default function SettingsPage({ active = true }) {
             </div>
             <div className="p-6 space-y-3 text-sm text-main">
               <p>{t('笔记、卡片、复习记录都存在本机一个 SQLite 文件里，不上传任何服务器。')}</p>
-              <p className="text-xs text-muted break-all">%APPDATA%\Cardbox\cardbox.db</p>
+              <p className="text-xs text-muted break-all">{status.dbPath || t('读取中…')}</p>
+              {window.electronAPI?.chooseDataDir && (
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  <button
+                    onClick={async () => {
+                      const dir = await window.electronAPI.chooseDataDir();
+                      if (!dir) return;
+                      const ok = window.confirm(t('把数据搬到这个位置并重启？数据会复制过去，原目录保留一份备份。') + '\n' + dir);
+                      if (!ok) return;
+                      const r = await window.electronAPI.setDataDir(dir);
+                      if (!r?.ok) setMsg(t('切换失败：{e}', { e: r?.error || 'unknown' }));
+                    }}
+                    className="px-3 py-2 rounded-lg bg-primary-600 text-white text-sm hover:bg-primary-700 transition-colors"
+                  >
+                    {t('更改保存位置…')}
+                  </button>
+                  <span className="text-xs text-muted">{t('会先复制一份，重启后生效')}</span>
+                </div>
+              )}
               <p className="text-xs text-muted">{t('API Key、主题、字号这些偏好也只保存在这台电脑上。')}</p>
             </div>
           </div>

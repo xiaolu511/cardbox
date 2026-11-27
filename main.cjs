@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, dialog } = require('electron');
 const path = require('path');
 const { fork } = require('child_process');
 const fs = require('fs');
@@ -28,6 +28,18 @@ function getOrCreateJwtSecret(userDataPath) {
   }
 }
 
+// 数据目录可在设置里改；默认就是 userData。改动只写配置，重启后生效。
+function dataDirConfigPath() {
+  return path.join(app.getPath('userData'), 'data-dir.json');
+}
+function readDataDir() {
+  try {
+    const cfg = JSON.parse(fs.readFileSync(dataDirConfigPath(), 'utf8'));
+    if (cfg && typeof cfg.dbDir === 'string' && cfg.dbDir.trim()) return cfg.dbDir;
+  } catch {}
+  return app.getPath('userData');
+}
+
 function startServer() {
   const userDataPath = app.getPath('userData');
   const envPath = path.join(__dirname, 'server', '.env');
@@ -50,7 +62,7 @@ function startServer() {
     env: {
       ...process.env,
       ...envVars,
-      DB_DIR: userDataPath,
+      DB_DIR: readDataDir(),
       FRONTEND_DIST: path.join(__dirname, 'web', 'dist')
     }
   });
@@ -150,4 +162,35 @@ ipcMain.on('window-maximize', (event) => {
 });
 ipcMain.on('window-close', (event) => {
   BrowserWindow.fromWebContents(event.sender).close();
+});
+// ===== 数据目录：选择 / 迁移 / 重启 =====
+ipcMain.handle('data-dir:get', () => ({
+  current: readDataDir(),
+  userData: app.getPath('userData'),
+}));
+
+ipcMain.handle('data-dir:choose', async () => {
+  const win = BrowserWindow.getAllWindows()[0];
+  const r = await dialog.showOpenDialog(win, {
+    title: '选择数据保存位置',
+    properties: ['openDirectory', 'createDirectory'],
+  });
+  return r.canceled ? null : r.filePaths[0];
+});
+
+ipcMain.handle('data-dir:set', async (_e, dir) => {
+  if (!dir || typeof dir !== 'string') return { ok: false, error: 'bad dir' };
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    const from = readDataDir();
+    for (const f of ['cardbox.db', 'cardbox.db-wal', 'cardbox.db-shm']) {
+      const src = path.join(from, f);
+      if (fs.existsSync(src)) fs.copyFileSync(src, path.join(dir, f));
+    }
+    fs.writeFileSync(dataDirConfigPath(), JSON.stringify({ dbDir: dir }, null, 2), 'utf8');
+    setTimeout(() => { app.relaunch(); app.exit(0); }, 600);
+    return { ok: true, dir };
+  } catch (e) {
+    return { ok: false, error: String(e.message || e) };
+  }
 });

@@ -113,13 +113,13 @@ export default function App() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-sidebar transition-colors duration-300">
-      <header className="h-14 flex items-center justify-between px-4 border-b border-app shrink-0 drag-region z-50">
+      <header className="relative h-14 flex items-center justify-between px-4 border-b border-app shrink-0 drag-region z-50">
         <div className="flex items-center gap-2">
           <span className="w-6 h-6 rounded bg-primary-600 text-white flex items-center justify-center text-xs font-bold">C</span>
           <h1 className="text-lg font-bold text-primary-600">Cardbox</h1>
         </div>
         {token && !focusMode && (
-          <nav className="flex items-center gap-1.5 no-drag">
+          <nav className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5 no-drag">
             {navItems.map((item) => (
               <button
                 key={item.id}

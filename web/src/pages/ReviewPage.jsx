@@ -25,7 +25,9 @@ const buildChart = (last7d) => {
 
 const emptyStats = { due: 0, mastered: 0, total: 0, todayReviewed: 0, last7d: [] };
 
-export default function ReviewPage({ active }) {
+export default function ReviewPage({ active, categoryId = 'all' }) {
+  // 分类（文件夹）决定复习范围：文件夹 -> 卡片。没有选中分类时退回按笔记列表选。
+  const scoped = categoryId && categoryId !== 'all';
   useI18n();
   const [view, setView] = useState('home');
   const [notes, setNotes] = useState([]);
@@ -63,10 +65,15 @@ export default function ReviewPage({ active }) {
     setLoading(true);
     setErr('');
     try {
-      const notesRes = await api('/api/notes?limit=100');
-      setNotes(notesRes.data);
+      if (scoped) {
+        const ov = await api('/api/categories/' + categoryId + '/overview');
+        setNotes(ov.cards.map((c) => ({ id: c.id, question: c.question })));
+      } else {
+        const notesRes = await api('/api/notes?limit=100');
+        setNotes(notesRes.data);
+      }
 
-      const statsRes = await api('/api/stats');
+      const statsRes = await api('/api/stats' + (scoped ? '?category_id=' + categoryId : ''));
       setServerStats(statsRes);
 
       setChartData(buildChart(statsRes.last7d));
@@ -75,7 +82,7 @@ export default function ReviewPage({ active }) {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [categoryId, scoped]);
 
   // 🌟 核心修复：监听 active 变化，切到当前页面时刷新数据
   useEffect(() => {
@@ -88,7 +95,12 @@ export default function ReviewPage({ active }) {
     setLoading(true);
     setErr('');
     try {
-      const data = await api(`/api/review?note_id=${selectedNote}`);
+      const qs = new URLSearchParams();
+      if (scoped) qs.set('category_id', categoryId);
+      if (selectedNote !== 'all') {
+        if (scoped) qs.set('card_id', selectedNote); else qs.set('note_id', selectedNote);
+      }
+      const data = await api('/api/review' + (qs.toString() ? '?' + qs : ''));
       if (data.length === 0) {
         alert(t('当前选择范围内没有需要复习的卡片！'));
         setLoading(false);
@@ -338,10 +350,12 @@ export default function ReviewPage({ active }) {
                   onChange={e => setSelectedNote(e.target.value)}
                   className="w-full border border-app bg-app text-main p-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 cursor-pointer text-sm"
                 >
-                  <option value="all" className="bg-app text-main">{t('全部笔记的卡片')}</option>
+                  <option value="all" className="bg-app text-main">{scoped ? t('本分类里的全部卡片') : t('全部笔记的卡片')}</option>
                   {notes.map(n => (
                     <option key={n.id} value={n.id} className="bg-app text-main">
-                      {n.raw_text.slice(0, 15).replace(/\n/g, ' ')}... ({new Date(n.created_at).toLocaleDateString()})
+                      {scoped
+                        ? String(n.question || '').slice(0, 26).replace(/\n/g, ' ') + (String(n.question || '').length > 26 ? '…' : '')
+                        : n.raw_text.slice(0, 15).replace(/\n/g, ' ') + '... (' + new Date(n.created_at).toLocaleDateString() + ')'}
                     </option>
                   ))}
                 </select>
