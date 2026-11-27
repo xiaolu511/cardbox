@@ -113,6 +113,10 @@ body, #root {
 .dir-x-f .animate-page { animation-name: switchXF; animation-duration: 0.4s; }
 .dir-x-b .animate-page { animation-name: switchXB; animation-duration: 0.4s; }
 
+/* 放在 dir 规则之后：切换容器里的子组件不再跑自己的 animate-page，避免斜向叠加 */
+.switch-x-f .animate-page, .switch-x-b .animate-page,
+.switch-y-f .animate-page, .switch-y-b .animate-page { animation: none !important; }
+
 /* 小元素（提示、空态、浮层）只淡入，不做位移 */
 @keyframes fadeIn {
   from { opacity: 0; }
