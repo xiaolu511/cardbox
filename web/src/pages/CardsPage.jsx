@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { api } from '../api';
 import ReviewPage from './ReviewPage';
 import { useSwitchClass } from '../switchAnim';
+import { getFocusMode, subscribeFocusMode } from '../focusbus';
 import { t, useI18n, getLang } from '../i18n';
 
 // 一条笔记的摘要：取原文首行，太长就截断
@@ -56,6 +57,10 @@ export default function CardsPage({ active = true }) {
   // 分类详情（知识点 / 待办 / 重要事项）
   const [overview, setOverview] = useState({ cards: [], todos: [], important: [] });
   const [view, setView] = useState('cards');
+  // 答题时（专注模式）收起二级栏，和顶栏保持一致
+  const [focus, setFocus] = useState(getFocusMode());
+  useEffect(() => subscribeFocusMode(setFocus), []);
+
   const viewCls = useSwitchClass(view, ['cards', 'review'], 'x');
   const tabCls = useSwitchClass(tab, ['cards', 'todos', 'important', 'notes'], 'x');
   // 左栏分类是竖排的，切分类走上下动画
@@ -352,7 +357,7 @@ export default function CardsPage({ active = true }) {
     return (
       <div className={`space-y-4 ${viewCls || 'animate-detail'}`}>
         <div className="flex gap-6 items-start">
-          {rail}
+          {!focus && rail}
           <div key={activeCat.id} className={`flex-1 min-w-0 ${catCls}`}>
             <ReviewPage active={active} categoryId={activeCat.id} />
           </div>
@@ -369,7 +374,7 @@ export default function CardsPage({ active = true }) {
   return (
     <div className={`space-y-4 ${viewCls || 'animate-detail'}`}>
       <div className="flex gap-6 items-start">
-        {rail}
+        {!focus && rail}
         <div key={activeCat.id} className={`flex-1 min-w-0 space-y-4 ${catCls}`}>
       <div className="flex items-center gap-3">
         <h2 className="font-bold text-main">{activeCat.id === 'all' ? t('全部') : activeCat.name}</h2>
