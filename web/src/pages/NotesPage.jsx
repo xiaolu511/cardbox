@@ -44,6 +44,10 @@ export default function NotesPage({ active = true }) {
   const [splitTarget, setSplitTarget] = useState(null);
   const [analysisForm, setAnalysisForm] = useState({ instruction: '', thinking: 'standard' });
   const [progress, setProgress] = useState({ open: false, step: 0, idx: 0, total: 1, category: '', error: '', done: false, result: null });
+  // 导入到哪个分类：'auto' = 让 AI 判断，数字 = 已有分类 id，'new' = 新建
+  const [categories, setCategories] = useState([]);
+  const [catChoice, setCatChoice] = useState('auto');
+  const [newCatName, setNewCatName] = useState('');
   const [useRefine, setUseRefine] = useState(false); // 保存前先让 AI 精简一遍
   const [refining, setRefining] = useState(false);
   const [importMsg, setImportMsg] = useState('');
@@ -59,6 +63,13 @@ export default function NotesPage({ active = true }) {
     return next;
   });
   const [batchBusy, setBatchBusy] = useState(false);
+
+  useEffect(() => {
+    if (!splitTarget) return;
+    setCatChoice('auto');
+    setNewCatName('');
+    api('/api/categories').then((rows) => setCategories(Array.isArray(rows) ? rows : [])).catch(() => setCategories([]));
+  }, [splitTarget]);
 
   // 🌟 分页状态
   const [page, setPage] = useState(1);
@@ -151,19 +162,30 @@ export default function NotesPage({ active = true }) {
         try {
           analysis = await api(`/api/notes/${id}/analyze`, {
             method: 'POST',
-            body: { lang: getLang(), instruction: analysisForm.instruction, thinking: analysisForm.thinking },
+            body: {
+              lang: getLang(),
+              instruction: analysisForm.instruction,
+              thinking: analysisForm.thinking,
+              categoryId: catChoice !== 'auto' && catChoice !== 'new' ? Number(catChoice) : undefined,
+              categoryName: catChoice === 'new' ? newCatName.trim() || undefined : undefined,
+            },
           });
         } catch (e) {
           setProgress((p) => ({ ...p, error: e.message }));
           return;
         }
-        setProgress((p) => ({ ...p, step: 2, category: analysis.category || '' }));
+        const chosen = catChoice === 'new' ? newCatName.trim() : (catChoice === 'auto' ? '' : (categories.find((c) => String(c.id) === String(catChoice))?.name || ''));
+        setProgress((p) => ({ ...p, step: 2, category: chosen || analysis.category || '' }));
         await new Promise((r) => setTimeout(r, 700));
         setProgress((p) => ({ ...p, step: 3 }));
         try {
           const r = await api(`/api/notes/${id}/apply`, {
             method: 'POST',
-            body: { analysis: { cards: analysis.cards || [], summary: analysis.summary || '' } },
+            body: {
+              analysis: { cards: analysis.cards || [], summary: analysis.summary || '' },
+              categoryId: catChoice !== 'auto' && catChoice !== 'new' ? Number(catChoice) : undefined,
+              categoryName: catChoice === 'new' ? newCatName.trim() || undefined : undefined,
+            },
           });
           cards += (r.created && r.created.cards) || 0;
         } catch (e) {
@@ -364,6 +386,29 @@ export default function NotesPage({ active = true }) {
                   ))}
                 </div>
                 <p className="text-xs text-muted mt-1.5">{t('越深入，挖出的待办和重要事项越多，耗时也更长。')}</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-main mb-1.5">{t('导入到分类')}</label>
+                <select
+                  value={catChoice}
+                  onChange={(e) => setCatChoice(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-app bg-app text-sm text-main"
+                >
+                  <option value="auto">{t('自动判断（由 AI 归类）')}</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                  <option value="new">{t('＋ 新建分类…')}</option>
+                </select>
+                {catChoice === 'new' && (
+                  <input
+                    value={newCatName}
+                    onChange={(e) => setNewCatName(e.target.value)}
+                    placeholder={t('给新分类起个名字')}
+                    className="mt-2 w-full px-3 py-2 rounded-lg border border-app bg-app text-sm text-main"
+                  />
+                )}
+                <p className="text-xs text-muted mt-1.5">{t('选「自动判断」就让 AI 决定；也可以先指定，分类和归属会一起写进去。')}</p>
               </div>
             </div>
             <div className="px-5 py-4 border-t border-app flex justify-end gap-3">

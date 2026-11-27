@@ -15,6 +15,11 @@ export const LANGS = [
 ];
 
 const TW = {
+  "导入到分类": "匯入到分類",
+  "自动判断（由 AI 归类）": "自動判斷（由 AI 歸類）",
+  "＋ 新建分类…": "＋ 新建分類…",
+  "给新分类起个名字": "給新分類取個名字",
+  "选「自动判断」就让 AI 决定；也可以先指定，分类和归属会一起写进去。": "選「自動判斷」就讓 AI 決定；也可以先指定，分類和歸屬會一起寫進去。",
   "得分": "得分",
   "越严格，答案缺关键点就越容易被判成「忘了」。": "越嚴格，答案缺關鍵點就越容易被判成「忘了」。",
   "宽松": "寬鬆",
@@ -219,6 +224,11 @@ const TW = {
 };
 
 const EN = {
+  "导入到分类": "Import into category",
+  "自动判断（由 AI 归类）": "Auto (decided by AI)",
+  "＋ 新建分类…": "+ New category…",
+  "给新分类起个名字": "Name the new category",
+  "选「自动判断」就让 AI 决定；也可以先指定，分类和归属会一起写进去。": "Pick Auto to let the AI decide, or choose one — the category is written together with the note.",
   "得分": "Score",
   "越严格，答案缺关键点就越容易被判成「忘了」。": "Stricter grading marks missing key points as \"forgot\" more often.",
   "宽松": "Lenient",
