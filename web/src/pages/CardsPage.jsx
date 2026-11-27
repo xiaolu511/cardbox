@@ -82,6 +82,7 @@ export default function CardsPage({ active = true }) {
   // 弹窗进出场（关闭时先播退场再卸载）
   const newCatModal = useModalPresence(newCatOpen);
   const manageModal = useModalPresence(!!manageCat);
+  const manageView = useHeld(manageCat);
   const editModal = useModalPresence(!!editing);
   const editingView = useHeld(editing);
 
@@ -150,7 +151,7 @@ export default function CardsPage({ active = true }) {
     setManageBusy(true);
     try {
       for (const id of manageSel) {
-        await api('/api/notes/' + id + '/category', { method: 'PATCH', body: { categoryId: manageCat.id } });
+        await api('/api/notes/' + id + '/category', { method: 'PATCH', body: { categoryId: manageView.id } });
       }
       await loadManage(manageCat, manageQ);
       await loadCats();
@@ -644,7 +645,7 @@ export default function CardsPage({ active = true }) {
             <div className={`w-full max-w-2xl max-h-[80vh] bg-card border border-app rounded-2xl shadow-2xl flex flex-col overflow-hidden modal-panel ${manageModal.closing ? 'closing' : ''}`}>
               <div className="px-5 py-4 border-b border-app flex items-start justify-between gap-4">
                 <div>
-                  <h3 className="font-semibold text-main">{t('管理「{name}」里的笔记', { name: manageCat.name })}</h3>
+                  <h3 className="font-semibold text-main">{t('管理「{name}」里的笔记', { name: manageView.name })}</h3>
                   <p className="text-xs text-muted mt-1">{t('把笔记加进来，或从分类里移出、删除。')}</p>
                 </div>
                 <button type="button" onClick={() => setManageCat(null)} className="text-muted hover:text-main">
