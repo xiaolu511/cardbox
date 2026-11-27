@@ -664,6 +664,27 @@ app.post('/api/settings', { preHandler: auth }, async (req, reply) => {
   return { ok: true };
 });
 
+// ========== 危险操作：清空全部数据 ==========
+// 只清这个账号的内容，账号本身和 API Key 不动；前端有输入确认词 + 倒计时两道闸。
+app.post('/api/data/reset', { preHandler: auth }, async (req, reply) => {
+  const { confirm } = z.object({ confirm: z.string().max(20) }).parse(req.body ?? {});
+  if (confirm !== '清空') return reply.code(400).send({ error: '确认词不正确' });
+  const uid = req.user.uid;
+  const deleted = {};
+  const tx = db.transaction(() => {
+    // cards / review_log / todos / important 都靠外键级联，先删笔记最省事
+    deleted.cards = db.prepare('SELECT COUNT(*) AS n FROM cards WHERE note_id IN (SELECT id FROM notes WHERE user_id = ?)').get(uid).n;
+    deleted.reviews = db.prepare('SELECT COUNT(*) AS n FROM review_log WHERE card_id IN (SELECT id FROM cards WHERE note_id IN (SELECT id FROM notes WHERE user_id = ?))').get(uid).n;
+    deleted.notes = db.prepare('DELETE FROM notes WHERE user_id = ?').run(uid).changes;
+    deleted.todos = db.prepare('DELETE FROM todos WHERE user_id = ?').run(uid).changes;
+    deleted.important = db.prepare('DELETE FROM important_items WHERE user_id = ?').run(uid).changes;
+    deleted.categories = db.prepare('DELETE FROM categories WHERE user_id = ?').run(uid).changes;
+  });
+  tx();
+  db.exec('VACUUM');
+  return { ok: true, deleted };
+});
+
 // ========== 挂载前端 ==========
 await app.register(fastifyStatic, {
   root: process.env.FRONTEND_DIST || join(__dirname, '../../web/dist'),

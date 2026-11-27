@@ -1,5 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { api } from '../api';
+import { createPortal } from 'react-dom';
+import { useModalPresence } from '../modalAnim';
 import AboutPage from './AboutPage';
 import { applyTheme, readTheme, saveTheme, getContrastColor, importCustomFont, resetTheme } from '../theme';
 import { t, useI18n, setLang, getLang, LANGS } from '../i18n';
@@ -29,6 +31,15 @@ export default function SettingsPage({ active = true }) {
   const [key, setKey] = useState('');
   const [status, setStatus] = useState({ hasKey: false, maskedKey: '' });
   const [msg, setMsg] = useState('');
+
+  // 清空全部数据（危险操作）
+  const [resetOpen, setResetOpen] = useState(false);
+  const [resetWord, setResetWord] = useState('');
+  const [resetArmed, setResetArmed] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetErr, setResetErr] = useState('');
+  const [resetWrong, setResetWrong] = useState(false);
+  const resetModal = useModalPresence(resetOpen);
   
   // 主题状态：整份存在一个对象里，改哪个字段都走 update()，保证保存和应用不会漏项
   const [theme, setTheme] = useState(() => readTheme());
@@ -41,6 +52,13 @@ export default function SettingsPage({ active = true }) {
   const fileInputRef = useRef(null);
 
   // 切回设置页时重读一次 key 状态（别的窗口/别的设备改过也能同步）
+  useEffect(() => {
+    if (!resetOpen) { setResetArmed(false); setResetWord(''); setResetErr(''); return undefined; }
+    setResetArmed(false);
+    const t = setTimeout(() => setResetArmed(true), 3000);
+    return () => clearTimeout(t);
+  }, [resetOpen]);
+
   useEffect(() => {
     if (!active) return;
     api('/api/settings').then(setStatus).catch((e) => setMsg(`❌ ${e.message}`));
@@ -283,6 +301,21 @@ export default function SettingsPage({ active = true }) {
               <p className="text-xs text-muted">{t('API Key、主题、字号这些偏好也只保存在这台电脑上。')}</p>
             </div>
           </div>
+          <div className="rounded-xl border-2 border-red-500/40 bg-red-500/5 overflow-hidden">
+            <div className="px-6 py-4 border-b border-red-500/30 bg-red-500/10">
+              <h3 className="font-bold text-red-600 dark:text-red-400">{t('危险区域')}</h3>
+            </div>
+            <div className="p-6 space-y-3 text-sm text-main">
+              <p>{t('清空本机的全部笔记、卡片、待办、重要事项和复习记录。账号和 API Key 会保留。')}</p>
+              <button
+                type="button"
+                onClick={() => { setResetWord(''); setResetErr(''); setResetOpen(true); }}
+                className="px-4 py-2 rounded-lg border-2 border-red-500 text-red-600 dark:text-red-400 text-sm font-medium hover:bg-red-500 hover:text-white transition-colors"
+              >
+                {t('清空全部数据…')}
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className={`${sec === 'about' ? '' : 'hidden'} ${secCls}`}>
@@ -290,6 +323,60 @@ export default function SettingsPage({ active = true }) {
         </div>
         </div>
       </div>
+
+      {resetModal.mounted && createPortal(
+        <div className={`fixed inset-0 z-[70] flex items-center justify-center bg-black/70 backdrop-blur-sm p-6 modal-overlay danger-overlay ${resetModal.closing ? 'closing' : ''}`}>
+          <div className={`w-full max-w-md bg-card rounded-2xl shadow-2xl overflow-hidden modal-panel danger-panel ${resetModal.closing ? 'closing' : ''}`}>
+            <div className="px-6 pt-6 pb-4 text-center border-b border-red-500/30 bg-red-500/10 danger-glow">
+              <div className="text-4xl mb-2">⚠️</div>
+              <h3 className="text-lg font-bold text-red-600 dark:text-red-400">{t('清空全部数据')}</h3>
+              <p className="mt-2 text-sm text-main">{t('笔记、卡片、待办、重要事项、复习记录会被永久删除，无法恢复。')}</p>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-muted">
+                {t('确认请手动输入「清空」两个字：')}
+              </p>
+              <input
+                autoFocus
+                value={resetWord}
+                onChange={(e) => { setResetWord(e.target.value); setResetWrong(false); }}
+                placeholder={t('清空')}
+                className={`w-full px-3 py-2 rounded-lg border-2 bg-transparent text-main text-center tracking-widest focus:outline-none ${resetWrong ? 'border-red-500 danger-shake' : 'border-app focus:border-red-400'}`}
+              />
+              {resetErr && <p className="text-sm text-red-500 text-center">{resetErr}</p>}
+              <button
+                type="button"
+                disabled={!resetArmed || resetWord.trim() !== '清空' || resetBusy}
+                onClick={async () => {
+                  setResetBusy(true);
+                  setResetErr('');
+                  try {
+                    await api('/api/data/reset', { method: 'POST', body: { confirm: '清空' } });
+                    setResetOpen(false);
+                    setTimeout(() => window.location.reload(), 260);
+                  } catch (e) {
+                    setResetErr(e.message);
+                    setResetWrong(true);
+                  } finally {
+                    setResetBusy(false);
+                  }
+                }}
+                className={`w-full py-3 rounded-xl text-base font-bold text-white transition-all ${(!resetArmed || resetWord.trim() !== '清空' || resetBusy) ? 'bg-red-900/40 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700 danger-breath'}`}
+              >
+                {resetBusy ? t('正在删除…') : resetArmed ? t('永久删除') : t('请稍等 3 秒…')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setResetOpen(false)}
+                className="w-full py-2 text-sm text-muted hover:text-main transition-colors"
+              >
+                {t('取消')}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
