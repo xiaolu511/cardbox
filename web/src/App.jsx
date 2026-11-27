@@ -120,7 +120,33 @@ export default function App() {
           <span className="w-6 h-6 rounded bg-primary-600 text-white flex items-center justify-center text-xs font-bold">C</span>
           <h1 className="text-lg font-bold text-primary-600">Cardbox</h1>
         </div>
-        <div className="flex items-center gap-1 no-drag">
+        {token && !focusMode && (
+          <nav className="flex items-center gap-1 no-drag">
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setTab(item.id)}
+                className={`relative inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors duration-100 active:scale-[0.98] ${
+                  tab === item.id
+                    ? 'bg-primary-active font-bold text-main shadow-sm'
+                    : 'text-muted hover-item font-medium hover:text-main'
+                }`}
+              >
+                <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon} />
+                </svg>
+                {item.label}
+                {item.id === 'about' && updateReady && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500" title={t('有新版本 v{v}', { v: updateReady.latestVersion })} />
+                )}
+              </button>
+            ))}
+          </nav>
+        )}
+        <div className="flex items-center gap-1 no-drag ml-auto">
+          {token && (
+            <button onClick={() => { setToken(null); _setToken(null); }} className="mr-1 px-3 py-1.5 text-xs rounded-lg text-muted hover-item hover:text-main transition-colors">{t('退出登录')}</button>
+          )}
           <button onClick={() => window.electronAPI?.minimize()} className="p-2 hover-item rounded-md text-muted hover:text-main transition-colors"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="5.5" width="8" height="1" fill="currentColor" /></svg></button>
           <button onClick={() => window.electronAPI?.maximize()} className="p-2 hover-item rounded-md text-muted hover:text-main transition-colors"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2.5" y="2.5" width="7" height="7" fill="none" stroke="currentColor" strokeWidth="1.2" /></svg></button>
           <button onClick={() => window.electronAPI?.close()} className="p-2 hover:bg-red-500 hover:text-white rounded-md text-muted transition-colors"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" /></svg></button>
@@ -128,38 +154,7 @@ export default function App() {
       </header>
 
       <div className="flex-1 flex overflow-hidden">
-        {!focusMode && (<aside className="w-56 bg-sidebar border-r border-app flex flex-col shrink-0 z-20 transition-colors duration-300">
-          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto no-drag">
-            {token && navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setTab(item.id)}
-                // 🌟 核心：transition-colors 极速变色，active:scale 带来真实的按压手感
-                className={`w-full relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors duration-100 active:scale-[0.98] ${
-                  tab === item.id 
-                    ? 'bg-primary-active font-bold shadow-sm' 
-                    : 'text-muted hover-item font-medium hover:text-main'
-                }`}
-              >
-                <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon} />
-                </svg>
-                {item.label}
-                {item.id === 'about' && updateReady && (
-                  <span className="ml-auto w-1.5 h-1.5 rounded-full bg-red-500" title={t('有新版本 v{v}', { v: updateReady.latestVersion })} />
-                )}
-              </button>
-            ))}
-          </nav>
 
-          <div className="p-4 border-t border-app no-drag">
-            {token ? (
-              <button onClick={() => { setToken(null); _setToken(null); }} className="w-full py-2 bg-app hover:bg-red-500 hover:text-white text-main border border-app rounded-lg text-sm font-medium transition-colors">{t('退出登录')}</button>
-            ) : (
-              <p className="text-xs text-center text-muted">{t('请登录以使用')}</p>
-            )}
-          </div>
-        </aside>)}
 
         <main className="flex-1 flex flex-col relative overflow-hidden bg-app transition-colors duration-300">
           <div className="flex-1 overflow-y-auto px-6 py-6 z-10">
