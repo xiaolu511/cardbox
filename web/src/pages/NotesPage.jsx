@@ -389,26 +389,35 @@ export default function NotesPage({ active = true }) {
               </div>
               <div>
                 <label className="block text-sm font-medium text-main mb-1.5">{t('导入到分类')}</label>
-                <select
-                  value={catChoice}
-                  onChange={(e) => setCatChoice(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-app bg-app text-sm text-main"
-                >
-                  <option value="auto">{t('自动判断（由 AI 归类）')}</option>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCatChoice('auto')}
+                    className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${catChoice === 'auto' ? 'border-primary-500 bg-primary-600/10 text-primary-600 font-medium' : 'border-app text-muted hover:border-primary-500/50'}`}
+                  >{t('自动判断')}</button>
                   {categories.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => setCatChoice(String(c.id))}
+                      className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${String(catChoice) === String(c.id) ? 'border-primary-500 bg-primary-600/10 text-primary-600 font-medium' : 'border-app text-muted hover:border-primary-500/50'}`}
+                    >{c.name}</button>
                   ))}
-                  <option value="new">{t('＋ 新建分类…')}</option>
-                </select>
+                  <button
+                    type="button"
+                    onClick={() => setCatChoice('new')}
+                    className={`px-3 py-1.5 rounded-lg text-sm border border-dashed transition-colors ${catChoice === 'new' ? 'border-primary-500 bg-primary-600/10 text-primary-600 font-medium' : 'border-app text-muted hover:border-primary-500/50'}`}
+                  >{t('＋ 新建分类')}</button>
+                </div>
                 {catChoice === 'new' && (
                   <input
                     value={newCatName}
                     onChange={(e) => setNewCatName(e.target.value)}
                     placeholder={t('给新分类起个名字')}
-                    className="mt-2 w-full px-3 py-2 rounded-lg border border-app bg-app text-sm text-main"
+                    className="mt-2.5 w-full px-3 py-2 rounded-lg border border-app bg-app text-sm text-main"
                   />
                 )}
-                <p className="text-xs text-muted mt-1.5">{t('选「自动判断」就让 AI 决定；也可以先指定，分类和归属会一起写进去。')}</p>
+                <p className="text-xs text-muted mt-1.5">{t('不选就由 AI 归类；选了就先按这个分类存。')}</p>
               </div>
             </div>
             <div className="px-5 py-4 border-t border-app flex justify-end gap-3">

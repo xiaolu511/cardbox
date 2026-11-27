@@ -15,6 +15,9 @@ export const LANGS = [
 ];
 
 const TW = {
+  "自动判断": "自動判斷",
+  "＋ 新建分类": "＋ 新建分類",
+  "不选就由 AI 归类；选了就先按这个分类存。": "不選就由 AI 歸類；選了就先按這個分類存。",
   "导入到分类": "匯入到分類",
   "自动判断（由 AI 归类）": "自動判斷（由 AI 歸類）",
   "＋ 新建分类…": "＋ 新建分類…",
@@ -224,6 +227,9 @@ const TW = {
 };
 
 const EN = {
+  "自动判断": "Auto",
+  "＋ 新建分类": "+ New",
+  "不选就由 AI 归类；选了就先按这个分类存。": "Leave unselected and the AI decides; pick one to file it there.",
   "导入到分类": "Import into category",
   "自动判断（由 AI 归类）": "Auto (decided by AI)",
   "＋ 新建分类…": "+ New category…",
