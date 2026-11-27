@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog } = require('electron');
+const { app, BrowserWindow, dialog, session } = require('electron');
 const path = require('path');
 const { fork } = require('child_process');
 const fs = require('fs');
@@ -163,6 +163,44 @@ ipcMain.on('window-maximize', (event) => {
 ipcMain.on('window-close', (event) => {
   BrowserWindow.fromWebContents(event.sender).close();
 });
+// ===== 恢复出厂：删库 + 删机器级配置 + 清渲染层存储 + 重启 =====
+ipcMain.handle('app:factory-reset', async () => {
+  try {
+    // 1) 先停后端，释放数据库文件句柄（Windows 下占用会删不掉）
+    await new Promise((resolve) => {
+      if (!serverProcess) return resolve();
+      const timer = setTimeout(resolve, 2500);
+      serverProcess.once('exit', () => { clearTimeout(timer); resolve(); });
+      try { serverProcess.kill(); } catch { clearTimeout(timer); resolve(); }
+    });
+
+    // 2) 删当前数据目录里的库文件
+    const dir = readDataDir();
+    const failed = [];
+    for (const f of ['cardbox.db', 'cardbox.db-wal', 'cardbox.db-shm']) {
+      const p = path.join(dir, f);
+      try { if (fs.existsSync(p)) fs.unlinkSync(p); } catch { if (fs.existsSync(p)) failed.push(p); }
+    }
+
+    // 3) 删机器级配置：自定义数据目录、JWT 密钥
+    const userData = app.getPath('userData');
+    for (const f of ['data-dir.json', 'jwt-secret']) {
+      try { fs.unlinkSync(path.join(userData, f)); } catch {}
+    }
+
+    // 4) 清掉 localStorage（登录态/主题/字体/语言/判分偏好）
+    try { await session.defaultSession.clearStorageData(); } catch {}
+
+    if (failed.length) return { ok: false, error: '文件被占用，删不掉：' + failed.join('、') };
+
+    // 5) 重启，等于重新装了一遍
+    setTimeout(() => { app.relaunch(); app.exit(0); }, 400);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: String(e.message || e) };
+  }
+});
+
 // ===== 数据目录：选择 / 迁移 / 重启 =====
 ipcMain.handle('data-dir:get', () => ({
   current: readDataDir(),

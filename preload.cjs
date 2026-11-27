@@ -6,5 +6,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   close: () => ipcRenderer.send('window-close'),
   getDataDir: () => ipcRenderer.invoke('data-dir:get'),
   chooseDataDir: () => ipcRenderer.invoke('data-dir:choose'),
-  setDataDir: (dir) => ipcRenderer.invoke('data-dir:set', dir)
+  setDataDir: (dir) => ipcRenderer.invoke('data-dir:set', dir),
+  factoryReset: () => ipcRenderer.invoke('app:factory-reset')
 });

@@ -303,16 +303,16 @@ export default function SettingsPage({ active = true }) {
           </div>
           <div className="rounded-xl border-2 border-red-500/40 bg-red-500/5 overflow-hidden">
             <div className="px-6 py-4 border-b border-red-500/30 bg-red-500/10">
-              <h3 className="font-bold text-red-600 dark:text-red-400">{t('危险区域')}</h3>
+              <h3 className="font-bold text-red-600 dark:text-red-400">{t('恢复出厂设置')}</h3>
             </div>
             <div className="p-6 space-y-3 text-sm text-main">
-              <p>{t('清空本机的全部笔记、卡片、待办、重要事项和复习记录。账号和 API Key 会保留。')}</p>
+              <p>{t('把卡盒恢复成刚装好时的样子：账号、API Key、主题、字体、语言、判分偏好，以及全部笔记、卡片、待办、重要事项、复习记录，全部删掉。删完会自动重启，需要重新注册。')}</p>
               <button
                 type="button"
                 onClick={() => { setResetWord(''); setResetErr(''); setResetOpen(true); }}
                 className="px-4 py-2 rounded-lg border-2 border-red-500 text-red-600 dark:text-red-400 text-sm font-medium hover:bg-red-500 hover:text-white transition-colors"
               >
-                {t('清空全部数据…')}
+                {t('格式化应用（恢复出厂）…')}
               </button>
             </div>
           </div>
@@ -329,31 +329,39 @@ export default function SettingsPage({ active = true }) {
           <div className={`w-full max-w-md bg-card rounded-2xl shadow-2xl overflow-hidden modal-panel danger-panel ${resetModal.closing ? 'closing' : ''}`}>
             <div className="px-6 pt-6 pb-4 text-center border-b border-red-500/30 bg-red-500/10 danger-glow">
               <div className="text-4xl mb-2">⚠️</div>
-              <h3 className="text-lg font-bold text-red-600 dark:text-red-400">{t('清空全部数据')}</h3>
-              <p className="mt-2 text-sm text-main">{t('笔记、卡片、待办、重要事项、复习记录会被永久删除，无法恢复。')}</p>
+              <h3 className="text-lg font-bold text-red-600 dark:text-red-400">{t('格式化应用')}</h3>
+              <p className="mt-2 text-sm text-main">{t('这相当于把软件卸掉重装：账号和所有本地设置都会消失，且不可恢复。')}</p>
             </div>
             <div className="p-6 space-y-4">
               <p className="text-sm text-muted">
-                {t('确认请手动输入「清空」两个字：')}
+                {t('确认请手动输入「格式化」三个字：')}
               </p>
               <input
                 autoFocus
                 value={resetWord}
                 onChange={(e) => { setResetWord(e.target.value); setResetWrong(false); }}
-                placeholder={t('清空')}
+                placeholder={t('格式化')}
                 className={`w-full px-3 py-2 rounded-lg border-2 bg-transparent text-main text-center tracking-widest focus:outline-none ${resetWrong ? 'border-red-500 danger-shake' : 'border-app focus:border-red-400'}`}
               />
               {resetErr && <p className="text-sm text-red-500 text-center">{resetErr}</p>}
               <button
                 type="button"
-                disabled={!resetArmed || resetWord.trim() !== '清空' || resetBusy}
+                disabled={!resetArmed || resetWord.trim() !== '格式化' || resetBusy}
                 onClick={async () => {
                   setResetBusy(true);
                   setResetErr('');
                   try {
-                    await api('/api/data/reset', { method: 'POST', body: { confirm: '清空' } });
-                    setResetOpen(false);
-                    setTimeout(() => window.location.reload(), 260);
+                    if (window.electronAPI?.factoryReset) {
+                      const r = await window.electronAPI.factoryReset();
+                      if (!r?.ok) throw new Error(r?.error || '重置失败');
+                      setResetOpen(false);
+                    } else {
+                      // 浏览器调试环境没有 Electron：清接口 + localStorage 兜底
+                      await api('/api/data/reset', { method: 'POST', body: { confirm: '清空' } });
+                      localStorage.clear();
+                      setResetOpen(false);
+                      setTimeout(() => window.location.reload(), 260);
+                    }
                   } catch (e) {
                     setResetErr(e.message);
                     setResetWrong(true);
