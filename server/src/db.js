@@ -137,6 +137,20 @@ const addNoteCategoryColumn = () => {
 
 addNoteCategoryColumn();
 
+// 历史数据兜底：没有分类的笔记统一挂到「未分类」，否则卡片页里会"消失"
+const backfillUncategorized = () => {
+  const users = db.prepare('SELECT DISTINCT user_id FROM notes WHERE category_id IS NULL').all();
+  for (const row of users) {
+    let cat = db.prepare('SELECT id FROM categories WHERE user_id = ? AND name = ?').get(row.user_id, '未分类');
+    if (!cat) {
+      const info = db.prepare('INSERT INTO categories (user_id, name) VALUES (?, ?)').run(row.user_id, '未分类');
+      cat = { id: Number(info.lastInsertRowid) };
+    }
+    db.prepare('UPDATE notes SET category_id = ? WHERE user_id = ? AND category_id IS NULL').run(cat.id, row.user_id);
+  }
+};
+backfillUncategorized();
+
 
 // 2. 修复重复拆卡：给 (note_id, question) 加唯一索引
 try {

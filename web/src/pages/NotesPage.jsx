@@ -198,6 +198,7 @@ export default function NotesPage({ active = true }) {
                 todos: analysis.todos || [],
                 important: analysis.important || [],
                 summary: analysis.summary || '',
+                category: analysis.category || '',
               },
               categoryId: catChoice !== 'auto' && catChoice !== 'new' ? Number(catChoice) : undefined,
               categoryName: catChoice === 'new' ? newCatName.trim() || undefined : undefined,

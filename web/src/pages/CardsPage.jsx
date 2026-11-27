@@ -171,7 +171,7 @@ export default function CardsPage({ active = true }) {
             <p className="text-sm font-medium text-main">{t('全部')}</p>
             <p className="text-xs text-muted mt-1">{t('{n} 张卡片', { n: total })}</p>
           </button>
-          {cats.map((c) => (
+          {cats.filter((c) => (c.cardCount || 0) + (c.todoCount || 0) + (c.importantCount || 0) > 0).map((c) => (
             <button
               key={c.id}
               type="button"

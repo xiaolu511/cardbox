@@ -75,7 +75,7 @@ const auth = async (req, reply) => {
 // ========== 笔记管理 ==========
 app.post('/api/notes', { preHandler: auth }, async (req) => {
   const { raw_text } = z.object({ raw_text: z.string().min(1).max(20000) }).parse(req.body);
-  const info = db.prepare('INSERT INTO notes (user_id, raw_text) VALUES (?, ?)').run(req.user.uid, raw_text);
+  const info = db.prepare('INSERT INTO notes (user_id, raw_text, category_id) VALUES (?, ?, ?)').run(req.user.uid, raw_text, ensureCategory(req.user.uid, '未分类'));
   return db.prepare('SELECT * FROM notes WHERE id = ?').get(info.lastInsertRowid);
 });
 
@@ -290,6 +290,14 @@ function pickCategory(userId, name) {
   const found = db.prepare('SELECT id FROM categories WHERE user_id = ? AND name = ?').get(userId, trimmed);
   if (found) return found.id;
   const info = db.prepare('INSERT INTO categories (user_id, name) VALUES (?, ?)').run(userId, trimmed);
+  return Number(info.lastInsertRowid);
+}
+
+// 找不到就建；给「未分类」这类系统分类用
+function ensureCategory(userId, name) {
+  const found = db.prepare('SELECT id FROM categories WHERE user_id = ? AND name = ?').get(userId, name);
+  if (found) return found.id;
+  const info = db.prepare('INSERT INTO categories (user_id, name) VALUES (?, ?)').run(userId, name);
   return Number(info.lastInsertRowid);
 }
 
