@@ -311,7 +311,7 @@ export default function NotesPage({ active = true }) {
                     <button
                       onClick={(e) => { e.stopPropagation(); setAnalysisForm({ instruction: '', thinking: 'standard' }); setSplitTarget({ ids: [n.id] }); }}
                       disabled={busyId === n.id || busyId === 'batch'}
-                      className="text-primary-600 font-medium hover:underline disabled:opacity-50"
+                      className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-primary-600 text-white text-sm font-medium shadow-sm hover:bg-primary-700 active:scale-[0.98] transition-all disabled:opacity-50 disabled:active:scale-100"
                     >
                       {busyId === n.id ? t('AI 拆卡中...') : t('✨ 拆成卡片')}
                     </button>
