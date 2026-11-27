@@ -46,7 +46,7 @@ export default function NotesPage({ active = true }) {
   const [progress, setProgress] = useState({ open: false, step: 0, idx: 0, total: 1, category: '', error: '', done: false, result: null });
   // 导入到哪个分类：'auto' = 让 AI 判断，数字 = 已有分类 id，'new' = 新建
   const [categories, setCategories] = useState([]);
-  const [catChoice, setCatChoice] = useState('auto');
+  const [catChoice, setCatChoice] = useState('');
   const [newCatName, setNewCatName] = useState('');
   const [useRefine, setUseRefine] = useState(false); // 保存前先让 AI 精简一遍
   const [refining, setRefining] = useState(false);
@@ -73,9 +73,15 @@ export default function NotesPage({ active = true }) {
 
   useEffect(() => {
     if (!splitTarget) return;
-    setCatChoice('auto');
     setNewCatName('');
-    api('/api/categories').then((rows) => setCategories(Array.isArray(rows) ? rows : [])).catch(() => setCategories([]));
+    api('/api/categories')
+      .then((rows) => {
+        const list = Array.isArray(rows) ? rows : [];
+        setCategories(list);
+        // 不再由 AI 归类，也不预设：让用户自己选
+        setCatChoice('');
+      })
+      .catch(() => { setCategories([]); setCatChoice('new'); });
   }, [splitTarget]);
 
   // 🌟 分页状态
@@ -155,6 +161,14 @@ export default function NotesPage({ active = true }) {
   }
 
   async function runAnalysis(ids) {
+    if (!catChoice) {
+      setErr(t('请选择一个分类（也可以新建一个）。'));
+      return;
+    }
+    if (catChoice === 'new' && !newCatName.trim()) {
+      setErr(t('请先给新分类起个名字，或选择一个已有分类。'));
+      return;
+    }
     if (hasKey === false) {
       setErr(t('还没有配置 API Key，先去「设置」填上再拆卡。'));
       return;
@@ -413,7 +427,7 @@ export default function NotesPage({ active = true }) {
                   onChange={(e) => setCatChoice(e.target.value)}
                   className="w-full px-3 py-2 rounded-lg border border-app bg-app text-sm text-main"
                 >
-                  <option value="auto">{t('自动判断（由 AI 归类）')}</option>
+                  <option value="">{t('请选择分类')}</option>
                   {categories.map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
@@ -427,7 +441,7 @@ export default function NotesPage({ active = true }) {
                     className="mt-2 w-full px-3 py-2 rounded-lg border border-app bg-app text-sm text-main"
                   />
                 )}
-                <p className="text-xs text-muted mt-1.5">{t('选「自动判断」就让 AI 决定；也可以先指定，分类和归属会一起写进去。')}</p>
+                <p className="text-xs text-muted mt-1.5">{t('分类由你自己决定，AI 不会替你归类。')}</p>
               </div>
             </div>
             <div className="px-5 py-4 border-t border-app flex justify-end gap-3">
