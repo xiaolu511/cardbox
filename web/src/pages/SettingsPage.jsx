@@ -369,9 +369,9 @@ export default function SettingsPage({ active = true }) {
                     setResetBusy(false);
                   }
                 }}
-                className={`w-full py-3 rounded-xl text-base font-bold text-white transition-all ${(!resetArmed || resetWord.trim() !== '清空' || resetBusy) ? 'bg-red-900/40 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700 danger-breath'}`}
+                className={`w-full py-3 rounded-xl text-base font-bold text-white transition-all ${(!resetArmed || resetWord.trim() !== '格式化' || resetBusy) ? 'bg-red-900/40 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700 danger-breath'}`}
               >
-                {resetBusy ? t('正在删除…') : resetArmed ? t('永久删除') : t('请稍等 3 秒…')}
+                {resetBusy ? t('正在删除…') : !resetArmed ? t('请稍等 3 秒…') : resetWord.trim() === '格式化' ? t('永久删除') : t('请输入「格式化」')}
               </button>
               <button
                 type="button"
