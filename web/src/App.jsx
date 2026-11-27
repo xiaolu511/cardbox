@@ -9,7 +9,6 @@ import { upload } from './api';
 import LoginPage from './pages/LoginPage';
 import NotesPage from './pages/NotesPage';
 import CardsPage from './pages/CardsPage';
-import ReviewPage from './pages/ReviewPage';
 import SettingsPage from './pages/SettingsPage';
 import AboutPage from './pages/AboutPage';
 
@@ -110,7 +109,6 @@ export default function App() {
   const navItems = [
     { id: 'notes', label: t('笔记'), icon: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' },
     { id: 'cards', label: t('卡片'), icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10' },
-    { id: 'review', label: t('复习'), icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
     { id: 'settings', label: t('设置'), icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' },
     { id: 'about', label: t('关于'), icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
   ];
@@ -178,9 +176,6 @@ export default function App() {
                  </div>
                  <div className={tab === 'cards' ? 'block animate-page max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl mx-auto' : 'hidden'}>
                    <CardsPage active={tab === 'cards'} />
-                 </div>
-                 <div className={tab === 'review' ? 'block animate-page max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl mx-auto' : 'hidden'}>
-                   <ReviewPage active={tab === 'review'} />
                  </div>
                  <div className={tab === 'settings' ? 'block animate-page max-w-4xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl mx-auto' : 'hidden'}>
                    <SettingsPage active={tab === 'settings'} />

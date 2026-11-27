@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '../api';
+import ReviewPage from './ReviewPage';
 import { t, useI18n, getLang } from '../i18n';
 
 // 一条笔记的摘要：取原文首行，太长就截断
@@ -52,6 +53,7 @@ export default function CardsPage({ active = true }) {
 
   // 分类详情（知识点 / 待办 / 重要事项）
   const [overview, setOverview] = useState({ cards: [], todos: [], important: [] });
+  const [view, setView] = useState('cards'); // cards | review
 
   // 新建分类 / 管理分类里的笔记
   const [newCatOpen, setNewCatOpen] = useState(false);
@@ -264,11 +266,38 @@ export default function CardsPage({ active = true }) {
     setOverview((o) => ({ ...o, cards: o.cards.map((c) => (c.id === updated.id ? updated : c)) }));
   }
 
+  // 页内两个视图：卡片 / 复习
+  const viewSwitch = (
+    <div className="flex gap-1 p-1 rounded-xl bg-app border border-app w-fit">
+      {[
+        { key: 'cards', label: t('卡片') },
+        { key: 'review', label: t('复习') },
+      ].map((o) => (
+        <button
+          key={o.key}
+          type="button"
+          onClick={() => setView(o.key)}
+          className={`px-4 py-1.5 rounded-lg text-sm transition-colors ${view === o.key ? 'bg-card text-main font-medium shadow-sm' : 'text-muted hover:text-main'}`}
+        >{o.label}</button>
+      ))}
+    </div>
+  );
+
+  if (view === 'review') {
+    return (
+      <div className="space-y-4 animate-detail">
+        {viewSwitch}
+        <ReviewPage active={active} />
+      </div>
+    );
+  }
+
   // ================= 分类列表 =================
   if (!activeCat) {
     const total = cats.reduce((n, c) => n + (c.cardCount || 0), 0);
     return (
       <div className="space-y-6 animate-list">
+        {viewSwitch}
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-bold text-main">{t('分类')}</h2>
           <button
