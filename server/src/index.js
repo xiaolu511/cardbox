@@ -425,9 +425,15 @@ app.post('/api/categories', { preHandler: auth }, async (req, reply) => {
 });
 
 app.delete('/api/categories/:id', { preHandler: auth }, async (req, reply) => {
-  const info = db.prepare('DELETE FROM categories WHERE id = ? AND user_id = ?').run(req.params.id, req.user.uid);
-  if (!info.changes) return reply.code(404).send({ error: '分类不存在' });
-  return { ok: true };
+  const cat = db.prepare('SELECT id FROM categories WHERE id = ? AND user_id = ?').get(req.params.id, req.user.uid);
+  if (!cat) return reply.code(404).send({ error: '分类不存在' });
+  // 分类里的笔记先挪到「未分类」，别让它们凭空消失
+  const fallback = ensureCategory(req.user.uid, '未分类');
+  if (fallback !== cat.id) {
+    db.prepare('UPDATE notes SET category_id = ? WHERE category_id = ?').run(fallback, cat.id);
+  }
+  db.prepare('DELETE FROM categories WHERE id = ?').run(cat.id);
+  return { ok: true, movedTo: fallback };
 });
 
 app.patch('/api/notes/:id/category', { preHandler: auth }, async (req, reply) => {

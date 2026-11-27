@@ -244,6 +244,8 @@ const TW = {
   '这次记得怎么样？': '這次記得怎麼樣？',
   '确定要删除选中的 {n} 项吗？': '確定要刪除選中的 {n} 項嗎？',
   '删除选中': '刪除選中',
+  '删除分类': '刪除分類',
+  '⚠️ 确定删除分类「{name}」吗？里面的内容会移到未分类。': '⚠️ 確定刪除分類「{name}」嗎？裡面的內容會移到未分類。',
 };
 
 const EN = {
@@ -466,6 +468,8 @@ const EN = {
   '这次记得怎么样？': 'How well did you remember it?',
   '确定要删除选中的 {n} 项吗？': 'Delete the {n} selected item(s)?',
   '删除选中': 'Delete selected',
+  '删除分类': 'Delete category',
+  '⚠️ 确定删除分类「{name}」吗？里面的内容会移到未分类。': 'Delete category "{name}"? Its items will move to Uncategorized.',
 };
 
 const DICTS = { zhCN: null, zhTW: TW, en: EN };

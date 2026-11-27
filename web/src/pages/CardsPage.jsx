@@ -200,11 +200,11 @@ export default function CardsPage({ active = true }) {
             <p className="text-xs text-muted mt-1">{t('{n} 张卡片', { n: total })}</p>
           </button>
           {cats.map((c) => (
+            <div key={c.id} className="relative group">
             <button
-              key={c.id}
               type="button"
               onClick={() => { setActiveCat({ id: c.id, name: c.name }); setTab('cards'); }}
-              className="text-left p-5 rounded-2xl border border-app bg-card hover:border-primary-500/50 transition-colors"
+              className="w-full text-left p-5 rounded-2xl border border-app bg-card hover:border-primary-500/50 transition-colors"
             >
               <p className="text-sm font-medium text-main truncate">{c.name}</p>
               <p className="text-xs text-muted mt-1">
@@ -212,17 +212,23 @@ export default function CardsPage({ active = true }) {
                 {c.todoCount ? ` · ${t('{n} 条待办', { n: c.todoCount })}` : ''}
                 {c.importantCount ? ` · ${t('{n} 条重要', { n: c.importantCount })}` : ''}
               </p>
-              {(c.previewTodos?.length > 0 || c.previewImportant?.length > 0) && (
-                <div className="mt-3 pt-3 border-t border-app space-y-1">
-                  {(c.previewTodos || []).map((title, i) => (
-                    <p key={'t' + i} className="text-xs text-muted truncate">☐ {title}</p>
-                  ))}
-                  {(c.previewImportant || []).map((title, i) => (
-                    <p key={'i' + i} className="text-xs text-muted truncate">★ {title}</p>
-                  ))}
-                </div>
-              )}
             </button>
+            <button
+              type="button"
+              title={t('删除分类')}
+              onClick={async (e) => {
+                e.stopPropagation();
+                if (!confirm(t('⚠️ 确定删除分类「{name}」吗？里面的内容会移到未分类。', { name: c.name }))) return;
+                try {
+                  await api('/api/categories/' + c.id, { method: 'DELETE' });
+                  await loadCats();
+                } catch (err) { setCatErr(err.message); }
+              }}
+              className="absolute top-3 right-3 p-1.5 rounded-md text-muted opacity-40 hover:opacity-100 hover:text-red-600 hover:bg-red-50 transition-all"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-7H4m5-8V3a1 1 0 011-1h4a1 1 0 011 1v2m-6 0h6" /></svg>
+            </button>
+            </div>
           ))}
         </div>
         {cats.length === 0 && !catErr && (
@@ -247,19 +253,6 @@ export default function CardsPage({ active = true }) {
           ← {t('全部分类')}
         </button>
         <h2 className="font-bold text-main">{activeCat.name}</h2>
-        <button
-          type="button"
-          onClick={() => {
-            const next = !batchMode;
-            setBatchMode(next);
-            setSel(new Set()); setSelTodos(new Set()); setSelImportant(new Set());
-          }}
-          title={t('删除')}
-          className={`ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm transition-colors ${batchMode ? 'border-red-500/50 text-red-500 bg-red-500/10' : 'border-app text-muted hover:text-main hover:border-primary-500/50'}`}
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-7H4m5-8V3a1 1 0 011-1h4a1 1 0 011 1v2m-6 0h6" /></svg>
-          {batchMode ? t('取消') : t('删除')}
-        </button>
       </div>
 
       <div className="space-y-6 bg-card p-6 rounded-2xl shadow-sm border border-app transition-colors duration-300">
@@ -291,33 +284,6 @@ export default function CardsPage({ active = true }) {
           </form>
         )}
 
-        <div className="flex items-center gap-3 flex-wrap text-sm">
-          {!batchMode ? (
-            <button
-              onClick={() => setBatchMode(true)}
-              className="px-4 py-1.5 rounded-lg border border-app text-main hover:border-primary-500/60 transition-colors"
-            >{t('批量')}</button>
-          ) : (
-            <>
-              <span className="text-muted">{t('已选 {n} 张', { n: sel.size })}</span>
-              <button
-                onClick={toggleAll}
-                disabled={allCardIds.length === 0}
-                className="px-3 py-1.5 rounded-lg text-sm text-primary-600 hover:underline disabled:opacity-40"
-              >{allSelected ? t('取消全选') : t('全选')}</button>
-              <button
-                onClick={batchDelete}
-                disabled={sel.size === 0 || batchBusy}
-                className="px-4 py-1.5 rounded-lg border border-red-300 text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40"
-              >{t('批量删除')}</button>
-              <button
-                onClick={() => setBatchMode(false)}
-                className="px-4 py-1.5 rounded-lg text-muted hover-item transition-colors"
-              >{t('退出批量')}</button>
-            </>
-          )}
-        </div>
-
         {err && <p className="text-red-500 text-sm">{err}</p>}
 
         <div className="space-y-3">
@@ -326,16 +292,6 @@ export default function CardsPage({ active = true }) {
             return (
               <div key={g.noteId} className="border border-app rounded-xl overflow-hidden bg-card">
                 <div className="w-full flex items-start gap-3 p-4 hover:bg-black/[0.03] transition-colors">
-                  {batchMode && (
-                    <input
-                      type="checkbox"
-                      checked={g.cards.length > 0 && g.cards.every((c) => sel.has(c.id))}
-                      ref={(el) => { if (el) el.indeterminate = g.cards.some((c) => sel.has(c.id)) && !g.cards.every((c) => sel.has(c.id)); }}
-                      onChange={() => toggleGroup(g)}
-                      className="mt-1 w-4 h-4 accent-[var(--custom-primary)] shrink-0"
-                      title={t('选中这条笔记的全部卡片')}
-                    />
-                  )}
                   <button
                     onClick={() => toggle(g.noteId)}
                     className="flex-1 flex items-start gap-3 text-left"
@@ -429,24 +385,12 @@ export default function CardsPage({ active = true }) {
           {todos.length === 0 && (
             <div className="py-16 text-center text-muted text-sm">{t('还没有待办，分析笔记时会自动提取。')}</div>
           )}
-          {batchMode && (
-            <div className="flex items-center gap-3 text-sm">
-              <span className="text-muted">{t('已选 {n} 条', { n: selTodos.size })}</span>
-              <button onClick={batchDeleteMisc} disabled={batchBusy || selTodos.size === 0} className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50">{t('删除选中')}</button>
-            </div>
-          )}
           {todos.map((item) => (
             <div
               key={item.id}
-              onClick={() => { if (batchMode) toggleSet(setSelTodos, item.id); }}
-              className={`flex items-start gap-3 p-4 rounded-xl border transition-colors ${batchMode && selTodos.has(item.id) ? 'border-primary-500/60 ring-1 ring-primary-500/30' : ''} ${item.status === 'done' ? 'border-app bg-app/40' : 'border-app bg-card hover:border-primary-500/40'}`}
+              className={`flex items-start gap-3 p-4 rounded-xl border transition-colors ${item.status === 'done' ? 'border-app bg-app/40' : 'border-app bg-card hover:border-primary-500/40'}`}
             >
-              {batchMode && (
-                <span className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center shrink-0 ${selTodos.has(item.id) ? 'bg-primary-600 border-primary-600 text-white' : 'border-app text-transparent'}`}>
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
-                </span>
-              )}
-              {!batchMode && <button
+              {<button
                 type="button"
                 onClick={() => toggleTodo(item)}
                 className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${item.status === 'done' ? 'bg-primary-600 border-primary-600 text-white' : 'border-app text-transparent hover:border-primary-500'}`}
@@ -471,20 +415,27 @@ export default function CardsPage({ active = true }) {
           {important.length === 0 && (
             <div className="md:col-span-2 py-16 text-center text-muted text-sm">{t('还没有重要事项。')}</div>
           )}
-          {batchMode && (
-            <div className="md:col-span-2 flex items-center gap-3 text-sm">
-              <span className="text-muted">{t('已选 {n} 条', { n: selImportant.size })}</span>
-              <button onClick={batchDeleteMisc} disabled={batchBusy || selImportant.size === 0} className="px-3 py-1.5 rounded-lg border border-red-500/40 text-red-500 hover:bg-red-500/10 transition-colors disabled:opacity-50">{t('删除选中')}</button>
-            </div>
-          )}
           {important.map((item) => (
             <div
               key={item.id}
-              onClick={() => { if (batchMode) toggleSet(setSelImportant, item.id); }}
-              className={`border rounded-xl p-5 bg-card space-y-2 transition-colors ${batchMode && selImportant.has(item.id) ? 'border-primary-500/60 ring-1 ring-primary-500/30' : 'border-app'}`}
+              className="border rounded-xl p-5 bg-card space-y-2 transition-colors border-app relative group"
             >
-              <p className="text-sm font-medium text-main">{item.title}</p>
+              <p className="text-sm font-medium text-main pr-8">{item.title}</p>
               {item.detail && <p className="text-sm text-muted whitespace-pre-wrap">{item.detail}</p>}
+              <button
+                type="button"
+                title={t('删除')}
+                onClick={async () => {
+                  if (!confirm(t('⚠️ 确定要删除这条重要事项吗？'))) return;
+                  try {
+                    await api('/api/important/' + item.id, { method: 'DELETE' });
+                    if (isAll) await load(q, true); else await loadOverview(activeCat.id);
+                  } catch (e) { setErr(e.message); }
+                }}
+                className="absolute top-3 right-3 p-1.5 rounded-md text-muted opacity-40 hover:opacity-100 hover:text-red-600 hover:bg-red-50 transition-all"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
             </div>
           ))}
         </div>
